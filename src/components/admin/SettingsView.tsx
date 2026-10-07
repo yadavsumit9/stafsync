@@ -52,10 +52,10 @@ export const SettingsView: React.FC = () => {
 
       {/* Header bar */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
           System & Punch Policy Settings
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        <p className="text-sm font-normal text-slate-500 mt-1">
           Configure organization rules, biometric timing limits, grace windows, and permissions
         </p>
       </div>

@@ -50,6 +50,7 @@ export interface Employee {
   employmentType: 'Full Time' | 'Part Time' | 'Contract' | 'Intern';
   shiftId: string;
   defaultWorkMode: WorkMode;
+  allowFlexibleWorkMode?: boolean; // When true, staff can choose Office, WFH, or Hybrid on Punch-In
   weeklyOffDays: string[]; // ['Sunday', 'Saturday']
   status: 'Active' | 'Inactive';
   accountUsername: string;

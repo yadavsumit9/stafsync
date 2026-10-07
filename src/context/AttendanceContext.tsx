@@ -65,6 +65,7 @@ interface AttendanceContextType {
   markNotificationRead: (id: string) => void;
   createAnnouncement: (title: string, message: string) => void;
   getTodayRecordForEmployee: (employeeId: string) => AttendanceRecord | undefined;
+  toggleFlexibleWorkMode: (employeeId: string, allowed: boolean) => { success: boolean; message: string };
 }
 
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
@@ -131,7 +132,29 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [employees, setEmployees] = useState<Employee[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: Employee[] = JSON.parse(saved);
+        // Ensure all INITIAL_EMPLOYEES (including EMP009 Aman Verma) exist
+        const existingIds = new Set(parsed.map((e) => e.id.toUpperCase()));
+        let changed = false;
+        INITIAL_EMPLOYEES.forEach((init) => {
+          if (!existingIds.has(init.id.toUpperCase())) {
+            parsed.push(init);
+            changed = true;
+          } else {
+            // Also update allowFlexibleWorkMode if missing
+            const item = parsed.find((p) => p.id.toUpperCase() === init.id.toUpperCase());
+            if (item && item.allowFlexibleWorkMode === undefined && init.allowFlexibleWorkMode !== undefined) {
+              item.allowFlexibleWorkMode = init.allowFlexibleWorkMode;
+              changed = true;
+            }
+          }
+        });
+        if (changed) {
+          localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -151,7 +174,20 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: AttendanceRecord[] = JSON.parse(saved);
+        // Ensure today's record for EMP009 exists
+        const hasEmp009 = parsed.some((r) => r.employeeId === 'EMP009' && r.date === '2026-10-07');
+        if (!hasEmp009) {
+          const initRecs = generateInitialAttendance();
+          const rec009 = initRecs.find((r) => r.employeeId === 'EMP009' && r.date === '2026-10-07');
+          if (rec009) {
+            parsed.unshift(rec009);
+            localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(parsed));
+          }
+        }
+        return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -302,13 +338,25 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return { success: false, message: 'Invalid Admin password. Default demo password is "admin123".' };
     }
 
-    // Check Staff / Employee
-    const foundEmp = employees.find(
-      (e) =>
-        e.id.toUpperCase() === cleanId ||
-        e.accountUsername.toUpperCase() === cleanId ||
-        e.email.toLowerCase() === idOrUser.trim().toLowerCase()
-    );
+    // Check Staff / Employee (allow matching by ID, username, email, full name or partial name)
+    const rawTarget = idOrUser.trim().toLowerCase();
+    const matchEmp = (e: Employee) =>
+      e.id.toUpperCase() === cleanId ||
+      e.accountUsername.toUpperCase() === cleanId ||
+      e.email.toLowerCase() === rawTarget ||
+      e.name.toLowerCase() === rawTarget ||
+      e.name.toLowerCase().includes(rawTarget);
+
+    let foundEmp = employees.find(matchEmp);
+
+    // Fallback: If not found in current state, check INITIAL_EMPLOYEES
+    if (!foundEmp) {
+      const fallback = INITIAL_EMPLOYEES.find(matchEmp);
+      if (fallback) {
+        foundEmp = fallback;
+        setEmployees((prev) => (prev.some((p) => p.id === fallback.id) ? prev : [...prev, fallback]));
+      }
+    }
 
     if (foundEmp) {
       if (foundEmp.status === 'Inactive') {
@@ -333,7 +381,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     return {
       success: false,
-      message: 'Employee ID not found. Use ADMIN001 (pass: admin123) or EMP001/EMP002 (pass: staff123).',
+      message: 'Account not found. You can enter EMP009, "Aman Verma", EMP002, or click the quick demo buttons below.',
     };
   };
 
@@ -401,6 +449,10 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       lateMins = nowMinutes - shiftStartMinutes;
     }
 
+    // Work Mode Authorization: Only employees explicitly allowed by Admin can select WFH / Hybrid / Office freely.
+    // Otherwise, the system enforces their assigned default work mode.
+    const effectiveWorkMode: WorkMode = emp.allowFlexibleWorkMode ? workMode : emp.defaultWorkMode;
+
     const newRecord: AttendanceRecord = {
       id: existing ? existing.id : `ATT_${todayStr.replace(/-/g, '')}_${emp.id}`,
       employeeId: emp.id,
@@ -412,7 +464,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       punchIn: timeFormatted,
       punchOut: null,
       status,
-      workMode,
+      workMode: effectiveWorkMode,
       workingHoursMinutes: 0,
       lateDurationMinutes: lateMins,
       overtimeMinutes: 0,
@@ -827,6 +879,31 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     addAuditLog('Announcement Broadcast', `Broadcast announcement: "${title}"`);
   };
 
+  const toggleFlexibleWorkMode = (
+    employeeId: string,
+    allowed: boolean
+  ): { success: boolean; message: string } => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, message: 'Only Admin can update flexible work permissions.' };
+    }
+    const emp = employees.find((e) => e.id === employeeId);
+    if (!emp) return { success: false, message: 'Employee not found.' };
+
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === employeeId ? { ...e, allowFlexibleWorkMode: allowed } : e))
+    );
+
+    addAuditLog(
+      'Work Mode Permission Updated',
+      `Admin ${allowed ? 'granted' : 'revoked'} Work From Anywhere / Flexible Mode for ${emp.name} (${emp.id})`
+    );
+
+    return {
+      success: true,
+      message: `${allowed ? 'Granted' : 'Revoked'} flexible work permission for ${emp.name}.`,
+    };
+  };
+
   return (
     <AttendanceContext.Provider
       value={{
@@ -865,6 +942,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         markNotificationRead,
         createAnnouncement,
         getTodayRecordForEmployee,
+        toggleFlexibleWorkMode,
       }}
     >
       {children}

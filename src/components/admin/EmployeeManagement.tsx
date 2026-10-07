@@ -20,14 +20,23 @@ import {
   Save,
   Check,
   AlertCircle,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
 import { Employee, WorkMode } from '../../types';
 import { DigitalIdCard } from '../common/DigitalIdCard';
 
 export const EmployeeManagement: React.FC = () => {
-  const { employees, shifts, addEmployee, updateEmployee, deleteEmployee, resetEmployeePassword } =
-    useAttendance();
+  const {
+    employees,
+    shifts,
+    addEmployee,
+    updateEmployee,
+    deleteEmployee,
+    resetEmployeePassword,
+    toggleFlexibleWorkMode,
+  } = useAttendance();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
@@ -57,6 +66,7 @@ export const EmployeeManagement: React.FC = () => {
     employmentType: 'Full Time' as 'Full Time' | 'Part Time' | 'Contract' | 'Intern',
     shiftId: 'SHIFT_GEN',
     defaultWorkMode: 'OFFICE' as WorkMode,
+    allowFlexibleWorkMode: false,
     weeklyOffDays: ['Sunday', 'Saturday'],
     status: 'Active' as 'Active' | 'Inactive',
     password: 'staff123',
@@ -106,6 +116,7 @@ export const EmployeeManagement: React.FC = () => {
       employmentType: formData.employmentType,
       shiftId: formData.shiftId,
       defaultWorkMode: formData.defaultWorkMode,
+      allowFlexibleWorkMode: formData.allowFlexibleWorkMode,
       weeklyOffDays: formData.weeklyOffDays,
       status: formData.status,
       accountUsername: formData.email.split('@')[0],
@@ -132,6 +143,7 @@ export const EmployeeManagement: React.FC = () => {
         employmentType: 'Full Time',
         shiftId: 'SHIFT_GEN',
         defaultWorkMode: 'OFFICE',
+        allowFlexibleWorkMode: false,
         weeklyOffDays: ['Sunday', 'Saturday'],
         status: 'Active',
         password: 'staff123',
@@ -180,10 +192,10 @@ export const EmployeeManagement: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
             Employee Directory
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm font-normal text-slate-500 mt-1">
             Manage organization members, credentials, and work schedules ({employees.length} total)
           </p>
         </div>
@@ -241,7 +253,7 @@ export const EmployeeManagement: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+              <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[11px]">
                 <th className="py-3.5 px-4">Employee</th>
                 <th className="py-3.5 px-4">Employee ID</th>
                 <th className="py-3.5 px-4">Department & Role</th>
@@ -296,9 +308,38 @@ export const EmployeeManagement: React.FC = () => {
                         {shift ? shift.name : 'General Shift'}
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium">
-                          {emp.defaultWorkMode}
-                        </span>
+                        <div>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium block w-fit">
+                            {emp.defaultWorkMode}
+                          </span>
+                          {emp.allowFlexibleWorkMode ? (
+                            <button
+                              onClick={() => {
+                                toggleFlexibleWorkMode(emp.id, false);
+                                setSuccessToast(`Revoked flexible work mode for ${emp.name}`);
+                                setTimeout(() => setSuccessToast(''), 3000);
+                              }}
+                              title="Click to lock work mode to default"
+                              className="mt-1 inline-flex items-center gap-1 text-[10px] text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded-md font-semibold transition-colors cursor-pointer"
+                            >
+                              <Sparkles className="w-2.5 h-2.5 text-[#087A4B]" />
+                              <span>Flexible (Anywhere)</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                toggleFlexibleWorkMode(emp.id, true);
+                                setSuccessToast(`Allowed work from anywhere for ${emp.name}`);
+                                setTimeout(() => setSuccessToast(''), 3000);
+                              }}
+                              title="Click to allow work from anywhere"
+                              className="mt-1 inline-flex items-center gap-1 text-[10px] text-slate-500 hover:text-emerald-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-md font-medium transition-colors cursor-pointer"
+                            >
+                              <Lock className="w-2.5 h-2.5 text-slate-400" />
+                              <span>Fixed Only</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
                         {emp.joiningDate}
@@ -625,6 +666,28 @@ export const EmployeeManagement: React.FC = () => {
                       <option value="Intern">Intern</option>
                     </select>
                   </div>
+                  <div className="sm:col-span-2 p-3 bg-emerald-50/60 rounded-xl border border-emerald-200/80 flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-slate-900 block flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-[#087A4B]" />
+                        Allow Work From Anywhere (Flexible Location Mode)
+                      </span>
+                      <span className="text-[11px] text-slate-600 block mt-0.5">
+                        If enabled, this employee can freely select Office, Work From Home, or Hybrid at punch-in.
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer ml-3 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={formData.allowFlexibleWorkMode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, allowFlexibleWorkMode: e.target.checked })
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#087A4B]"></div>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -789,6 +852,31 @@ export const EmployeeManagement: React.FC = () => {
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
+              </div>
+              <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200/80 flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-slate-900 block flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#087A4B]" />
+                    Allow Work From Anywhere (Flexible Location Mode)
+                  </span>
+                  <span className="text-[11px] text-slate-600 block mt-0.5">
+                    When enabled, this employee can choose between Office, WFH, or Hybrid on Punch-In.
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer ml-3 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingEmployee.allowFlexibleWorkMode)}
+                    onChange={(e) =>
+                      setEditingEmployee({
+                        ...editingEmployee,
+                        allowFlexibleWorkMode: e.target.checked,
+                      })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#087A4B]"></div>
+                </label>
               </div>
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button

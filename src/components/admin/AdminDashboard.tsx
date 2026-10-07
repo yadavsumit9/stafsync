@@ -97,9 +97,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* Top Section Header matching reference */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Overview</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Here is the real-time summary of workforce attendance data
+          <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">Overview</h1>
+          <p className="text-sm font-normal text-slate-500 mt-1">
+            Real-time workforce attendance, biometric punch logs, and departmental breakdown
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <select
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as any)}
-              className="appearance-none bg-white border border-slate-200/90 hover:border-slate-300 text-xs font-semibold text-slate-700 px-3.5 py-2 pr-8 rounded-xl shadow-xs outline-none cursor-pointer"
+              className="appearance-none bg-white border border-slate-200/90 hover:border-slate-300 text-xs font-medium text-slate-700 px-3.5 py-2 pr-8 rounded-xl shadow-xs outline-none cursor-pointer"
             >
               <option value="Today">Today</option>
               <option value="This Week">This Week</option>
@@ -125,7 +125,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 resetAllData();
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200/90 hover:bg-slate-50 rounded-xl shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200/90 hover:bg-slate-50 rounded-xl shadow-xs transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
             <span>Reset Data</span>
@@ -144,7 +144,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-white/95">Total Employees</h3>
-                <p className="text-[11px] text-emerald-100/75">Workforce Overview & Shifts</p>
+                <p className="text-[11px] font-normal text-emerald-100/75">Workforce Overview & Shifts</p>
               </div>
             </div>
             <button
@@ -157,10 +157,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-3xl sm:text-4xl font-extrabold tracking-tight font-mono">
+            <span className="text-3xl sm:text-4xl font-bold tracking-tight font-mono">
               {totalEmployees}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-xs">
+            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-xs">
               +4 this month ↑
             </span>
           </div>
@@ -173,7 +173,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>See employee list</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[11px] text-emerald-200/80 font-mono">
+            <span className="text-[11px] font-normal text-emerald-200/80 font-mono">
               {presentToday + lateToday} on duty today
             </span>
           </div>
@@ -188,7 +188,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Present Today</h3>
-                <p className="text-[11px] text-slate-400">On-Time & Active Workforce</p>
+                <p className="text-[11px] font-normal text-slate-400">On-Time & Active Workforce</p>
               </div>
             </div>
             <button
@@ -200,10 +200,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight font-mono">
+            <span className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight font-mono">
               {presentToday}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-mono">
+            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-mono">
               {attendanceRate}% present
             </span>
           </div>
@@ -216,7 +216,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>View live roster</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] font-normal text-slate-400">
               {lateToday} late arrival{lateToday !== 1 ? 's' : ''}
             </span>
           </div>
@@ -231,7 +231,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">On Leave / Week Off</h3>
-                <p className="text-[11px] text-slate-400">Approved Absences & Breaks</p>
+                <p className="text-[11px] font-normal text-slate-400">Approved Absences & Breaks</p>
               </div>
             </div>
             <button
@@ -243,10 +243,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="my-5 flex items-baseline gap-2.5">
-            <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight font-mono">
+            <span className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight font-mono">
               {onLeaveToday + weekOffToday}
             </span>
-            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+            <span className="inline-flex items-center text-xs font-normal text-slate-500 font-mono">
               {onLeaveToday} Leaves · {weekOffToday} Off
             </span>
           </div>
@@ -259,7 +259,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>Manage requests</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] font-normal text-slate-400">
               {leaves.filter((l) => l.status === 'Pending').length} pending approval
             </span>
           </div>
@@ -272,8 +272,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">Workforce by Department</h3>
-              <p className="text-xs text-slate-400">Live active staffing today</p>
+              <h3 className="text-base font-semibold text-slate-900 tracking-tight">Workforce by Department</h3>
+              <p className="text-xs font-normal text-slate-400">Live active staffing today</p>
             </div>
             <button
               onClick={onOpenAddEmployee}
@@ -299,16 +299,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 hover:bg-slate-50 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 truncate">{dept}</span>
+                    <span className="text-xs font-semibold text-slate-800 truncate">{dept}</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   </div>
                   <div className="mt-2 text-lg font-bold text-slate-900 font-mono">
                     {presentInDept} / {totalInDept}
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
+                  <div className="text-[10px] font-normal text-slate-400 mt-0.5">
                     {rate}% present today
                   </div>
-                  <span className="inline-block mt-2 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  <span className="inline-block mt-2 text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
                     Active
                   </span>
                 </div>
@@ -317,7 +317,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Quick Work Mode Split */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-normal">
             <span className="flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-slate-400" />
               <span>Office: {todayRecords.filter((r) => r.workMode === 'OFFICE').length}</span>
@@ -336,7 +336,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div>
-              <span className="text-xs text-slate-400 font-medium">Attendance & Punctuality Trend</span>
+              <span className="text-xs text-slate-400 font-normal">Attendance & Punctuality Trend</span>
               <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-mono mt-0.5">
                 94.8% Average Rate
               </div>

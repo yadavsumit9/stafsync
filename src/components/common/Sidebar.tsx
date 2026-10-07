@@ -112,10 +112,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </svg>
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-bold text-slate-900 tracking-tight leading-none">
+            <span className="text-[15px] font-semibold text-slate-900 tracking-tight leading-none">
               StaffSync
             </span>
-            <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase mt-1">
+            <span className="text-[10px] text-slate-400 font-normal tracking-wide uppercase mt-1">
               Workforce OS
             </span>
           </div>
@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-6">
         {/* MAIN MENU */}
         <div>
-          <div className="px-3 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="px-3 mb-2 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
             Main Menu
           </div>
           <div className="space-y-1">
@@ -184,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* ANALYTICS SECTION */}
         {isAdmin ? (
           <div>
-            <div className="px-3 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="px-3 mb-2 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
               Analytics
             </div>
             <div className="space-y-1">
@@ -195,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ) : (
           <div>
-            <div className="px-3 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="px-3 mb-2 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
               Work Schedule
             </div>
             <div className="space-y-1">
@@ -207,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* GENERAL SECTION */}
         <div>
-          <div className="px-3 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <div className="px-3 mb-2 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
             General
           </div>
           <div className="space-y-1">
@@ -235,11 +235,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 m-3 rounded-2xl bg-[#F6F7F9] border border-slate-200/90">
         <div className="flex items-center gap-2">
           <span className="text-sm">🏢</span>
-          <span className="text-xs font-bold text-slate-900">
+          <span className="text-xs font-semibold text-slate-900">
             {isAdmin ? 'Attendance Policy' : 'Shift Active'}
           </span>
         </div>
-        <p className="mt-1 text-[11px] text-slate-500 leading-normal">
+        <p className="mt-1 text-[11px] font-normal text-slate-500 leading-normal">
           {isAdmin
             ? 'Grace threshold: 15 mins. Punch cutoff: 11:00 AM.'
             : 'General Shift: 09:30 AM to 06:30 PM (Asia/Kolkata)'}

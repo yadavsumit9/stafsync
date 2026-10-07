@@ -82,10 +82,10 @@ export const StaffLeavePortal: React.FC = () => {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+        <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
           My Leaves & Time Off
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        <p className="text-sm font-normal text-slate-500 mt-1">
           Submit leave requests and monitor administrative approval decisions
         </p>
       </div>

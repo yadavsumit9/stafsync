@@ -61,10 +61,10 @@ export const CalendarView: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
             Attendance Calendar
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm font-normal text-slate-500 mt-1">
             Monthly schedule visual breakdown and status mapping
           </p>
         </div>
@@ -72,11 +72,11 @@ export const CalendarView: React.FC = () => {
         {/* Employee Switcher (Admin Only) */}
         {isAdmin && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-semibold">Select Employee:</span>
+            <span className="text-xs text-slate-500 font-medium">Select Employee:</span>
             <select
               value={selectedEmpId}
               onChange={(e) => setSelectedEmpId(e.target.value)}
-              className="bg-white text-xs font-semibold text-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-xs outline-none cursor-pointer"
+              className="bg-white text-xs font-medium text-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-xs outline-none cursor-pointer"
             >
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
@@ -93,7 +93,7 @@ export const CalendarView: React.FC = () => {
         {/* Month Navigation & Stats Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">
               {monthNames[currentMonth]} {currentYear}
             </h2>
             <div className="flex items-center gap-1">

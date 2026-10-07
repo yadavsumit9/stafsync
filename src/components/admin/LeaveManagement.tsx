@@ -82,10 +82,10 @@ export const LeaveManagement: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
             Leave Requests & Quotas
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm font-normal text-slate-500 mt-1">
             Review staff applications, track quota balances, and grant formal approvals
           </p>
         </div>
@@ -109,11 +109,11 @@ export const LeaveManagement: React.FC = () => {
               : 'bg-white border-slate-200/80 hover:bg-slate-50'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Pending Approvals</span>
             <Clock className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
             {leaves.filter((l) => l.status === 'Pending').length}
           </div>
         </div>
@@ -126,11 +126,11 @@ export const LeaveManagement: React.FC = () => {
               : 'bg-white border-slate-200/80 hover:bg-slate-50'
           }`}
         >
-          <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Approved Leaves</span>
             <CheckCircle className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="mt-2 text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">
             {leaves.filter((l) => l.status === 'Approved').length}
           </div>
         </div>

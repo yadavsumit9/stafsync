@@ -58,10 +58,10 @@ export const HolidayManagement: React.FC = () => {
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
             Organization Holiday Schedule
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm font-normal text-slate-500 mt-1">
             National, cultural, and corporate designated non-working holidays
           </p>
         </div>

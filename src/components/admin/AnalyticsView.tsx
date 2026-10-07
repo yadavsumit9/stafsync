@@ -41,10 +41,10 @@ export const AnalyticsView: React.FC = () => {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight">
             Workforce Attendance Analytics
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-sm font-normal text-slate-500 mt-1">
             Operational trends, department punctuality metrics, and working hours distribution
           </p>
         </div>
@@ -53,35 +53,35 @@ export const AnalyticsView: React.FC = () => {
       {/* High-level metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs text-slate-400 block font-medium">Overall Attendance Rate</span>
-          <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-[#087A4B] font-mono">
+          <span className="text-xs text-slate-400 block font-normal">Overall Attendance Rate</span>
+          <div className="mt-2 text-2xl sm:text-3xl font-bold text-[#087A4B] font-mono">
             93.4%
           </div>
-          <span className="text-[11px] text-emerald-600 font-semibold">+2.1% this quarter</span>
+          <span className="text-[11px] text-emerald-600 font-medium">+2.1% this quarter</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs text-slate-400 block font-medium">Avg Working Hours</span>
-          <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">
+          <span className="text-xs text-slate-400 block font-normal">Avg Working Hours</span>
+          <div className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900 font-mono">
             {Math.floor(avgMins / 60)}h {avgMins % 60}m
           </div>
-          <span className="text-[11px] text-slate-400 font-mono">Target: 8h 0m</span>
+          <span className="text-[11px] text-slate-400 font-mono font-normal">Target: 8h 0m</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs text-slate-400 block font-medium">Total Late Occurrences</span>
-          <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-amber-700 font-mono">
+          <span className="text-xs text-slate-400 block font-normal">Total Late Occurrences</span>
+          <div className="mt-2 text-2xl sm:text-3xl font-bold text-amber-700 font-mono">
             {lateCount}
           </div>
-          <span className="text-[11px] text-amber-600 font-semibold">4.8% of logged days</span>
+          <span className="text-[11px] text-amber-600 font-medium">4.8% of logged days</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs text-slate-400 block font-medium">Leaves & Absences</span>
-          <div className="mt-2 text-2xl sm:text-3xl font-extrabold text-blue-700 font-mono">
+          <span className="text-xs text-slate-400 block font-normal">Leaves & Absences</span>
+          <div className="mt-2 text-2xl sm:text-3xl font-bold text-blue-700 font-mono">
             {leaveCount} Leaves · {absentCount} Abs
           </div>
-          <span className="text-[11px] text-slate-400">Paid PTO quota compliant</span>
+          <span className="text-[11px] text-slate-400 font-normal">Paid PTO quota compliant</span>
         </div>
       </div>
 
