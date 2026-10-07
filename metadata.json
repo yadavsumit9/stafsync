@@ -1,0 +1,7 @@
+{
+  "name": "StaffSync - Staff Attendance Management System",
+  "description": "Production-ready Staff Attendance Management System with comprehensive Admin Panel and Employee Self-Service Portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
