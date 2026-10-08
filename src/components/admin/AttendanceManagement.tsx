@@ -22,7 +22,7 @@ import { AttendanceRecord, AttendanceStatus, WorkMode } from '../../types';
 import { AttendanceDetailModal } from '../common/AttendanceDetailModal';
 
 export const AttendanceManagement: React.FC = () => {
-  const { attendance, employees, shifts, adminAddAttendanceRecord } = useAttendance();
+  const { attendance, employees, shifts, adminAddAttendanceRecord, branding } = useAttendance();
 
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,7 +107,8 @@ export const AttendanceManagement: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `StaffSync_Attendance_Report_${dateRange}_20261007.csv`);
+    const safePrefix = (branding?.projectName || 'StaffSync').replace(/[^a-zA-Z0-9_-]/g, '_');
+    link.setAttribute('download', `${safePrefix}_Attendance_Report_${dateRange}_20261007.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

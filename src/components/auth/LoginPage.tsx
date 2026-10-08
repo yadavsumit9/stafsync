@@ -20,7 +20,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
-  const { login } = useAttendance();
+  const { login, branding } = useAttendance();
 
   const [usernameOrId, setUsernameOrId] = useState('');
   const [password, setPassword] = useState('');
@@ -69,7 +69,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         <div className="flex flex-col items-center text-center pb-6">
           <ProjectLogo size="lg" variant="badge" className="mb-3.5 shadow-md" />
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">
-            StaffSync Attendance OS
+            {branding.projectName} Attendance OS
           </h2>
           <p className="text-xs font-normal text-slate-500 mt-1">
             Enterprise Workforce & Biometric Management System

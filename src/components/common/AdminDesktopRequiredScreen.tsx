@@ -2,6 +2,7 @@ import React from 'react';
 import { Monitor, ArrowLeft, Shield, Laptop } from 'lucide-react';
 import { useViewport } from '../../hooks/useViewport';
 import { ProjectLogo } from './ProjectLogo';
+import { useBranding } from '../../context/AttendanceContext';
 
 interface AdminDesktopRequiredScreenProps {
   onBackToLogin: () => void;
@@ -11,6 +12,7 @@ export const AdminDesktopRequiredScreen: React.FC<AdminDesktopRequiredScreenProp
   onBackToLogin,
 }) => {
   const { width } = useViewport();
+  const { branding } = useBranding();
 
   return (
     <div className="min-h-screen bg-[#F7F8F7] flex flex-col items-center justify-center p-4 sm:p-6 select-none relative overflow-hidden">
@@ -79,7 +81,7 @@ export const AdminDesktopRequiredScreen: React.FC<AdminDesktopRequiredScreenProp
 
       {/* Brand Footer */}
       <div className="mt-8 text-center text-xs text-[#9CA3AF]">
-        StaffSync Attendance OS · Enterprise Workforce Management
+        {branding.projectName} Attendance OS · Enterprise Workforce Management
       </div>
     </div>
   );

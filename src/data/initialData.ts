@@ -4,6 +4,7 @@ import {
   Holiday,
   PunchSettings,
   CompanySettings,
+  BrandingSettings,
   AttendanceRecord,
   LeaveRequest,
   AuditLog,
@@ -311,6 +312,15 @@ export const INITIAL_COMPANY_SETTINGS: CompanySettings = {
   contactEmail: 'admin@staffsync.io',
   contactPhone: '+91 80 4429 8800',
   timezone: 'Asia/Kolkata',
+};
+
+export const INITIAL_BRANDING: BrandingSettings = {
+  organizationId: 'ORG_DEFAULT',
+  projectName: 'StaffSync',
+  logoUrl: null,
+  faviconUrl: null,
+  updatedAt: '2026-10-08 09:00 AM',
+  updatedBy: 'System Default',
 };
 
 export const INITIAL_LEAVES: LeaveRequest[] = [

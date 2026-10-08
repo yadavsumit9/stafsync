@@ -47,6 +47,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
     notifications,
     markNotificationRead,
     logout,
+    branding,
   } = useAttendance();
 
   // Active employee
@@ -231,8 +232,8 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
         <div className="flex items-center gap-2">
           <ProjectLogo size="sm" variant="badge" />
           <div>
-            <span className="text-sm font-semibold text-[#151515] tracking-tight block leading-tight">
-              StaffSync
+            <span className="text-sm font-semibold text-[#151515] tracking-tight block leading-tight truncate max-w-[140px]">
+              {branding.projectName}
             </span>
             <span className="text-[10px] text-[#6B7280] font-normal leading-none block">
               Good Morning, {currentEmp?.name.split(' ')[0]}

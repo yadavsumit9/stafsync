@@ -11,15 +11,23 @@ import {
   Globe,
   Bell,
   Smartphone,
+  Sparkles,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
 import { PunchSettings, CompanySettings } from '../../types';
+import { BrandingSettingsCard } from './BrandingSettingsCard';
 
-export const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+  initialTab?: 'punch' | 'general' | 'security' | 'branding';
+}
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ initialTab = 'punch' }) => {
   const { punchSettings, updatePunchSettings, companySettings, updateCompanySettings } =
     useAttendance();
 
-  const [activeTab, setActiveTab] = useState<'punch' | 'general' | 'security'>('punch');
+  const [activeTab, setActiveTab] = useState<'punch' | 'general' | 'security' | 'branding'>(
+    initialTab
+  );
 
   // Form states
   const [localPunch, setLocalPunch] = useState<PunchSettings>({ ...punchSettings });
@@ -91,6 +99,17 @@ export const SettingsView: React.FC = () => {
           }`}
         >
           Access & Security Rules
+        </button>
+        <button
+          onClick={() => setActiveTab('branding')}
+          className={`px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+            activeTab === 'branding'
+              ? 'bg-[#18181B] text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+          <span>Branding</span>
         </button>
       </div>
 
@@ -409,6 +428,8 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {activeTab === 'branding' && <BrandingSettingsCard />}
     </div>
   );
 };

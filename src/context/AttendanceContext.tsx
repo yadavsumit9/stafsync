@@ -12,6 +12,7 @@ import {
   NotificationItem,
   WorkMode,
   AttendanceStatus,
+  BrandingSettings,
 } from '../types';
 import {
   INITIAL_EMPLOYEES,
@@ -19,6 +20,7 @@ import {
   INITIAL_HOLIDAYS,
   INITIAL_PUNCH_SETTINGS,
   INITIAL_COMPANY_SETTINGS,
+  INITIAL_BRANDING,
   INITIAL_LEAVES,
   INITIAL_AUDIT_LOGS,
   INITIAL_NOTIFICATIONS,
@@ -34,6 +36,7 @@ interface AttendanceContextType {
   holidays: Holiday[];
   punchSettings: PunchSettings;
   companySettings: CompanySettings;
+  branding: BrandingSettings;
   auditLogs: AuditLog[];
   notifications: NotificationItem[];
   login: (idOrUser: string, pass: string) => { success: boolean; message?: string; role?: 'admin' | 'staff' };
@@ -61,6 +64,8 @@ interface AttendanceContextType {
   deleteHoliday: (id: string) => { success: boolean; message: string };
   updatePunchSettings: (settings: Partial<PunchSettings>) => void;
   updateCompanySettings: (settings: Partial<CompanySettings>) => void;
+  updateBranding: (updates: Partial<BrandingSettings>) => { success: boolean; message: string };
+  resetBranding: () => { success: boolean; message: string };
   resetAllData: () => void;
   markNotificationRead: (id: string) => void;
   createAnnouncement: (title: string, message: string) => void;
@@ -79,6 +84,7 @@ const STORAGE_KEYS = {
   HOLIDAYS: 'staffsync_holidays_v1',
   PUNCH_SETTINGS: 'staffsync_punch_settings_v1',
   COMPANY_SETTINGS: 'staffsync_company_settings_v1',
+  BRANDING_PREFIX: 'staffsync_branding_v1_',
   AUDIT_LOGS: 'staffsync_audit_logs_v1',
   NOTIFICATIONS: 'staffsync_notifications_v1',
 };
@@ -233,6 +239,46 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     return INITIAL_COMPANY_SETTINGS;
   });
+
+  const [branding, setBranding] = useState<BrandingSettings>(() => {
+    try {
+      const orgId = 'ORG_DEFAULT';
+      const saved = localStorage.getItem(STORAGE_KEYS.BRANDING_PREFIX + orgId);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...INITIAL_BRANDING,
+          ...parsed,
+        };
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return INITIAL_BRANDING;
+  });
+
+  // Dynamic Browser Tab Favicon Synchronization
+  useEffect(() => {
+    try {
+      let iconLink = document.querySelector("link[rel*='icon']") as HTMLLinkElement | null;
+      if (!iconLink) {
+        iconLink = document.createElement('link');
+        iconLink.rel = 'icon';
+        document.head.appendChild(iconLink);
+      }
+      if (branding.faviconUrl) {
+        // Cache bust query if it's an external URL or data URL
+        const cacheBuster = branding.faviconUrl.startsWith('data:')
+          ? branding.faviconUrl
+          : `${branding.faviconUrl}?v=${branding.updatedAt ? encodeURIComponent(branding.updatedAt) : Date.now()}`;
+        iconLink.href = cacheBuster;
+      } else {
+        iconLink.href = '/favicon.svg';
+      }
+    } catch (e) {
+      console.error('Failed to update favicon link', e);
+    }
+  }, [branding.faviconUrl, branding.updatedAt]);
 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     try {
@@ -840,6 +886,73 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     addAuditLog('Company Settings Changed', 'Admin updated organization profile settings');
   };
 
+  const updateBranding = (updates: Partial<BrandingSettings>): { success: boolean; message: string } => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, message: 'Unauthorized. Only administrators can customize organization branding.' };
+    }
+    const nowStr = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+    const targetOrgId = updates.organizationId || branding.organizationId || 'ORG_DEFAULT';
+    const updated: BrandingSettings = {
+      ...branding,
+      ...updates,
+      organizationId: targetOrgId,
+      projectName: updates.projectName !== undefined ? (updates.projectName.trim() || INITIAL_BRANDING.projectName) : branding.projectName,
+      updatedAt: nowStr,
+      updatedBy: `${currentUser.name} (Admin)`,
+    };
+    setBranding(updated);
+    try {
+      localStorage.setItem(STORAGE_KEYS.BRANDING_PREFIX + targetOrgId, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save branding in storage:', e);
+    }
+
+    // Granular audit logging
+    if (updates.projectName && updates.projectName.trim() !== branding.projectName) {
+      addAuditLog(
+        'PROJECT_NAME_UPDATED',
+        `Admin changed organization project name from "${branding.projectName}" to "${updates.projectName.trim()}"`
+      );
+    }
+    if (updates.logoUrl !== undefined) {
+      if (updates.logoUrl) {
+        addAuditLog('LOGO_UPDATED', `Admin uploaded new custom application logo`);
+      } else {
+        addAuditLog('LOGO_REMOVED', `Admin removed custom logo and reverted to system default`);
+      }
+    }
+    if (updates.faviconUrl !== undefined) {
+      if (updates.faviconUrl) {
+        addAuditLog('FAVICON_UPDATED', `Admin uploaded new custom browser favicon`);
+      } else {
+        addAuditLog('FAVICON_REMOVED', `Admin removed custom favicon and reverted to system default`);
+      }
+    }
+
+    return { success: true, message: 'Branding updated successfully.' };
+  };
+
+  const resetBranding = (): { success: boolean; message: string } => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      return { success: false, message: 'Unauthorized. Only administrators can reset branding settings.' };
+    }
+    const targetOrgId = branding.organizationId || 'ORG_DEFAULT';
+    const def: BrandingSettings = {
+      ...INITIAL_BRANDING,
+      organizationId: targetOrgId,
+      updatedAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }),
+      updatedBy: `${currentUser.name} (Admin)`,
+    };
+    setBranding(def);
+    try {
+      localStorage.removeItem(STORAGE_KEYS.BRANDING_PREFIX + targetOrgId);
+    } catch (e) {
+      console.error(e);
+    }
+    addAuditLog('BRANDING_RESET', 'Admin restored organization branding to default project name, logo, and favicon');
+    return { success: true, message: 'Branding restored to default.' };
+  };
+
   const resetAllData = () => {
     localStorage.clear();
     setEmployees(INITIAL_EMPLOYEES);
@@ -849,6 +962,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setHolidays(INITIAL_HOLIDAYS);
     setPunchSettings(INITIAL_PUNCH_SETTINGS);
     setCompanySettings(INITIAL_COMPANY_SETTINGS);
+    setBranding(INITIAL_BRANDING);
     setAuditLogs(INITIAL_AUDIT_LOGS);
     setNotifications(INITIAL_NOTIFICATIONS);
     setCurrentUser({
@@ -938,6 +1052,9 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteHoliday,
         updatePunchSettings,
         updateCompanySettings,
+        branding,
+        updateBranding,
+        resetBranding,
         resetAllData,
         markNotificationRead,
         createAnnouncement,
@@ -956,6 +1073,11 @@ export const useAttendance = () => {
     throw new Error('useAttendance must be used within an AttendanceProvider');
   }
   return context;
+};
+
+export const useBranding = () => {
+  const { branding, updateBranding, resetBranding } = useAttendance();
+  return { branding, updateBranding, resetBranding };
 };
 
 function parseTimeConfig(hhmm: string): number {

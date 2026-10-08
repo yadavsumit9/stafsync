@@ -128,6 +128,15 @@ export interface CompanySettings {
   timezone: string;
 }
 
+export interface BrandingSettings {
+  organizationId: string;
+  projectName: string;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface AuditLog {
   id: string;
   action: string;

@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenMobileMenu,
   onOpenQuickAction,
 }) => {
-  const { currentUser, logout, notifications, markNotificationRead, resetAllData } = useAttendance();
+  const { currentUser, logout, notifications, markNotificationRead, resetAllData, branding } = useAttendance();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -61,6 +61,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         return 'Workforce Analytics';
       case 'settings':
         return 'System & Punch Settings';
+      case 'branding':
+        return 'Company Branding';
       case 'audit':
         return 'Audit Logs';
       case 'profile':
@@ -82,9 +84,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Breadcrumb: "StaffSync › Tab" */}
+        {/* Breadcrumb: "ProjectName › Tab" */}
         <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-          <span className="font-semibold text-slate-900">StaffSync</span>
+          <span className="font-semibold text-slate-900">{branding.projectName}</span>
           <span className="text-slate-400">›</span>
           <span className="text-slate-500 font-medium truncate max-w-[140px] sm:max-w-[220px]">
             {getTabTitle(currentTab)}

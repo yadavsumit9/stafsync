@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AttendanceProvider, useAttendance } from './context/AttendanceContext';
 import { LoginPage } from './components/auth/LoginPage';
 import { Navbar } from './components/common/Navbar';
@@ -25,12 +25,19 @@ import { useViewport } from './hooks/useViewport';
 import { ShieldAlert, ArrowLeft, Bell, User, LogOut } from 'lucide-react';
 
 function MainApp() {
-  const { currentUser, logout, leaves, notifications } = useAttendance();
+  const { currentUser, logout, leaves, notifications, branding } = useAttendance();
   const { width, isMobile, isAdminSupported } = useViewport();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState('');
   const [showMobileLogoutModal, setShowMobileLogoutModal] = useState(false);
+
+  // Dynamic Browser Tab Title updating with Project Name & Tab
+  useEffect(() => {
+    const name = branding?.projectName || 'StaffSync';
+    const tabName = getTabLabel(currentTab);
+    document.title = currentTab === 'dashboard' ? `${name} — Dashboard` : `${name} — ${tabName}`;
+  }, [currentTab, branding?.projectName]);
 
   // If user is not logged in, show unified Login Page
   if (!currentUser) {
@@ -200,6 +207,28 @@ function MainApp() {
         }
         return <SettingsView />;
 
+      case 'branding':
+        if (!isAdmin) {
+          return (
+            <div className="p-8 max-w-md mx-auto my-12 bg-white rounded-2xl border border-[#E6E8E7] text-center space-y-3 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-semibold text-[#151515]">Access Restricted</h2>
+              <p className="text-xs text-[#6B7280]">
+                Organization branding and white-label settings are restricted to system administrators.
+              </p>
+              <button
+                onClick={() => setCurrentTab('dashboard')}
+                className="px-4 py-2 bg-[#087A4B] text-white rounded-xl text-xs font-semibold shadow-xs"
+              >
+                Return to Dashboard
+              </button>
+            </div>
+          );
+        }
+        return <SettingsView initialTab="branding" />;
+
       case 'audit':
         if (!isAdmin) {
           return (
@@ -271,8 +300,12 @@ function MainApp() {
         return 'Shift Information';
       case 'holidays':
         return 'Holidays Schedule';
+      case 'settings':
+        return 'System Settings';
+      case 'branding':
+        return 'Company Branding';
       default:
-        return 'StaffSync';
+        return branding?.projectName || 'StaffSync';
     }
   };
 

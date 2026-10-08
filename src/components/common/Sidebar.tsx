@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   searchTerm = '',
   onSearchChange,
 }) => {
-  const { currentUser, logout, leaves } = useAttendance();
+  const { currentUser, logout, leaves, branding } = useAttendance();
   const isAdmin = currentUser?.role === 'admin';
 
   const pendingLeavesCount = leaves.filter((l) => l.status === 'Pending').length;
@@ -101,8 +101,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center gap-2.5">
           <ProjectLogo size="sm" variant="badge" />
           <div className="flex flex-col">
-            <span className="text-[15px] font-semibold text-slate-900 tracking-tight leading-none">
-              StaffSync
+            <span className="text-[15px] font-semibold text-slate-900 tracking-tight leading-none truncate max-w-[150px]">
+              {branding.projectName}
             </span>
             <span className="text-[10px] text-slate-400 font-normal tracking-wide uppercase mt-1">
               Workforce OS
@@ -201,6 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div className="space-y-1">
             {isAdmin && <NavItem tab="settings" icon={Settings} label="Settings" />}
+            {isAdmin && <NavItem tab="branding" icon={Sparkles} label="Branding" />}
             {isAdmin && <NavItem tab="audit" icon={ShieldAlert} label="Audit Logs" />}
             <button
               onClick={() => handleNav('help')}

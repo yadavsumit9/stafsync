@@ -15,7 +15,7 @@ import {
 import { useAttendance } from '../../context/AttendanceContext';
 
 export const ReportsView: React.FC = () => {
-  const { employees, attendance } = useAttendance();
+  const { employees, attendance, branding } = useAttendance();
 
   const [reportType, setReportType] = useState<'monthly' | 'weekly'>('monthly');
   const [selectedMonth, setSelectedMonth] = useState('2026-10');
@@ -113,7 +113,8 @@ export const ReportsView: React.FC = () => {
 
     const link = document.createElement('a');
     link.href = encodeURI(csvContent);
-    link.download = `StaffSync_Monthly_Attendance_Report_${selectedMonth}.csv`;
+    const safePrefix = (branding?.projectName || 'StaffSync').replace(/[^a-zA-Z0-9_-]/g, '_');
+    link.download = `${safePrefix}_Monthly_Attendance_Report_${selectedMonth}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

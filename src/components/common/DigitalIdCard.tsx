@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Employee, Shift } from '../../types';
 import { ProjectLogo } from './ProjectLogo';
+import { useBranding } from '../../context/AttendanceContext';
 
 interface DigitalIdCardProps {
   employee: Employee;
@@ -20,6 +21,7 @@ interface DigitalIdCardProps {
 }
 
 export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, onPrint }) => {
+  const { branding } = useBranding();
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B1510] via-[#10231B] to-[#0A1A12] text-white p-6 shadow-xl border border-emerald-900/50">
       {/* Background geometric accents matching high-end access badges */}
@@ -32,7 +34,7 @@ export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, o
           <ProjectLogo size="sm" variant="badge" className="rounded-lg border-emerald-700/50" />
           <div>
             <h4 className="text-xs font-bold tracking-wider uppercase text-emerald-400">
-              StaffSync Pass
+              {branding.projectName} Pass
             </h4>
             <p className="text-[10px] text-emerald-200/70">Verified Digital Credential</p>
           </div>
