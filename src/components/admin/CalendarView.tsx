@@ -57,7 +57,7 @@ export const CalendarView: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in pb-24 lg:pb-8">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -89,24 +89,24 @@ export const CalendarView: React.FC = () => {
       </div>
 
       {/* Calendar Card Container */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-6 space-y-4 sm:space-y-6">
         {/* Month Navigation & Stats Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-slate-900 tracking-tight">
+            <h2 className="text-base sm:text-lg font-semibold text-slate-900 tracking-tight">
               {monthNames[currentMonth]} {currentYear}
             </h2>
             <div className="flex items-center gap-1">
               <button
                 onClick={handlePrevMonth}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                 title="Previous Month"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={handleNextMonth}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                 title="Next Month"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -115,49 +115,50 @@ export const CalendarView: React.FC = () => {
           </div>
 
           {/* Color Legend */}
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className="text-slate-600">Present</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span className="text-slate-600">Late</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-              <span className="text-slate-600">On Leave</span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-slate-600">Leave</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
               <span className="text-slate-600">Holiday</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
               <span className="text-slate-600">Week Off</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
               <span className="text-slate-600">Absent</span>
             </span>
           </div>
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center">
           {/* Day Headers */}
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
             <div
               key={d}
-              className="py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider"
+              className="py-1.5 text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider"
             >
-              {d}
+              <span className="sm:hidden">{d.slice(0, 1)}</span>
+              <span className="hidden sm:inline">{d}</span>
             </div>
           ))}
 
           {/* Blank cells for offset */}
           {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-            <div key={`blank-${i}`} className="min-h-[85px] sm:min-h-[105px] rounded-xl bg-slate-50/40" />
+            <div key={`blank-${i}`} className="min-h-[50px] sm:min-h-[85px] rounded-xl bg-slate-50/40" />
           ))}
 
           {/* Month Days */}
@@ -205,24 +206,24 @@ export const CalendarView: React.FC = () => {
                 onClick={() => {
                   if (record) setSelectedRecord(record);
                 }}
-                className={`min-h-[85px] sm:min-h-[105px] p-2 rounded-xl border border-slate-200/70 flex flex-col justify-between text-left transition-all cursor-pointer hover:shadow-xs group ${statusColor} ${
+                className={`min-h-[50px] sm:min-h-[85px] p-1 sm:p-2 rounded-xl border border-slate-200/70 flex flex-col justify-between text-left transition-all cursor-pointer hover:shadow-xs group ${statusColor} ${
                   isToday ? 'ring-2 ring-[#087A4B]' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span
-                    className={`text-xs font-bold font-mono ${
+                    className={`text-[10px] sm:text-xs font-bold font-mono ${
                       isToday
-                        ? 'bg-[#087A4B] text-white px-1.5 py-0.5 rounded-md'
+                        ? 'bg-[#087A4B] text-white px-1 sm:px-1.5 py-0.5 rounded-md'
                         : 'text-slate-800'
                     }`}
                   >
                     {dayNum}
                   </span>
-                  {dotColor && <span className={`w-2 h-2 rounded-full ${dotColor}`} />}
+                  {dotColor && <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${dotColor}`} />}
                 </div>
 
-                <div className="mt-1">
+                <div className="mt-0.5 sm:mt-1 hidden sm:block">
                   {holiday ? (
                     <span className="text-[10px] font-semibold text-purple-700 block truncate">
                       {holiday.name}
@@ -247,6 +248,29 @@ export const CalendarView: React.FC = () => {
                   ) : (
                     <span className="text-[10px] text-slate-300">--</span>
                   )}
+                </div>
+
+                {/* Mobile compact label */}
+                <div className="sm:hidden mt-0.5">
+                  {record ? (
+                    <span className="text-[9px] font-bold block truncate leading-tight text-slate-700">
+                      {record.status === 'PRESENT'
+                        ? 'Pres'
+                        : record.status === 'WORKING'
+                        ? 'Work'
+                        : record.status === 'LATE'
+                        ? 'Late'
+                        : record.status === 'ON LEAVE'
+                        ? 'Leave'
+                        : record.status === 'WEEK OFF'
+                        ? 'Off'
+                        : ''}
+                    </span>
+                  ) : holiday ? (
+                    <span className="text-[8px] font-semibold text-purple-700 block truncate">
+                      Hol
+                    </span>
+                  ) : null}
                 </div>
               </div>
             );

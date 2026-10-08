@@ -21,6 +21,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
+import { ProjectLogo } from './ProjectLogo';
 
 interface SidebarProps {
   currentTab: string;
@@ -95,22 +96,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white border-r border-slate-200/80 w-64 select-none">
-      {/* Top Brand Logo matching OripioFin in reference */}
+      {/* Top Brand Logo matching reference */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#087A4B] to-[#044D2F] flex items-center justify-center text-white shadow-xs">
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
+          <ProjectLogo size="sm" variant="badge" />
           <div className="flex flex-col">
             <span className="text-[15px] font-semibold text-slate-900 tracking-tight leading-none">
               StaffSync

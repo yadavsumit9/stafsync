@@ -18,6 +18,8 @@ import {
 import { useAttendance } from '../../context/AttendanceContext';
 import { WorkMode, AttendanceRecord } from '../../types';
 import { DigitalIdCard } from '../common/DigitalIdCard';
+import { useViewport } from '../../hooks/useViewport';
+import { StaffMobileDashboard } from './StaffMobileDashboard';
 
 interface StaffDashboardProps {
   onNavigate: (tab: string) => void;
@@ -28,6 +30,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   onNavigate,
   onOpenLeaveModal,
 }) => {
+  const { isMobile } = useViewport();
   const {
     currentUser,
     employees,
@@ -38,6 +41,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     punchIn,
     punchOut,
   } = useAttendance();
+
+  // If viewing on mobile viewport, render dedicated mobile staff layout
+  if (isMobile) {
+    return (
+      <StaffMobileDashboard
+        onNavigate={onNavigate}
+        onOpenLeaveModal={onOpenLeaveModal}
+      />
+    );
+  }
 
   // Find active employee record
   const currentEmp =

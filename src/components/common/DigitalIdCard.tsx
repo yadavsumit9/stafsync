@@ -11,6 +11,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { Employee, Shift } from '../../types';
+import { ProjectLogo } from './ProjectLogo';
 
 interface DigitalIdCardProps {
   employee: Employee;
@@ -28,19 +29,7 @@ export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, o
       {/* Card Header */}
       <div className="relative flex items-center justify-between pb-4 border-b border-emerald-800/40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#087A4B] flex items-center justify-center text-white shadow-xs">
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
+          <ProjectLogo size="sm" variant="badge" className="rounded-lg border-emerald-700/50" />
           <div>
             <h4 className="text-xs font-bold tracking-wider uppercase text-emerald-400">
               StaffSync Pass

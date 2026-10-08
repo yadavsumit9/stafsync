@@ -71,7 +71,7 @@ export const StaffLeavePortal: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in pb-24 lg:pb-8">
       {/* Toast */}
       {toastMsg && (
         <div className="fixed top-5 right-5 z-50 bg-[#087A4B] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-top-2">
@@ -185,7 +185,62 @@ export const StaffLeavePortal: React.FC = () => {
               <span className="text-xs text-slate-400 font-mono">{myLeaves.length} records</span>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile View: Cards */}
+            <div className="block sm:hidden p-3 space-y-2.5">
+              {myLeaves.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-xs">
+                  No previous leave records found.
+                </div>
+              ) : (
+                myLeaves.map((leave) => (
+                  <div
+                    key={leave.id}
+                    className="p-3.5 rounded-xl border border-slate-200 bg-[#F7F8F7] space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-900 text-xs">
+                        {leave.leaveType}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                          leave.status === 'Approved'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : leave.status === 'Pending'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}
+                      >
+                        {leave.status}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
+                      <span className="font-mono">
+                        {leave.startDate} to {leave.endDate}
+                      </span>
+                      <span className="font-semibold font-mono text-[#151515]">
+                        {leave.totalDays} days
+                      </span>
+                    </div>
+
+                    {leave.reason && (
+                      <p className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200/60 leading-normal">
+                        {leave.reason}
+                      </p>
+                    )}
+
+                    {leave.reviewRemarks && (
+                      <p className="text-[10px] text-emerald-700 font-medium">
+                        Admin Note: {leave.reviewRemarks}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop / Tablet View: Table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">

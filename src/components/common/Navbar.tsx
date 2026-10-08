@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ChevronLeft,
-  ChevronRight,
   HelpCircle,
   Mail,
   Bell,
@@ -74,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8 py-3.5 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
-      {/* Left: Mobile menu toggle + History Arrows + Breadcrumbs */}
+      {/* Left: Mobile menu toggle + Breadcrumbs */}
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileMenu}
@@ -84,25 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Back / Forward history arrows matching reference UI */}
-        <div className="hidden sm:flex items-center gap-1 text-slate-400">
-          <button
-            onClick={() => window.history.back()}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200/90 hover:border-slate-300 text-slate-500 hover:text-slate-800 bg-white transition-colors shadow-xs"
-            title="Go Back"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => window.history.forward()}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200/90 hover:border-slate-300 text-slate-500 hover:text-slate-800 bg-white transition-colors shadow-xs"
-            title="Go Forward"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Breadcrumb matching reference: "Brand > Dashboard" */}
+        {/* Breadcrumb: "StaffSync › Tab" */}
         <div className="flex items-center gap-1.5 text-xs sm:text-sm">
           <span className="font-semibold text-slate-900">StaffSync</span>
           <span className="text-slate-400">›</span>

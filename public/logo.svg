@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <rect width="200" height="200" rx="36" fill="#000000"/>
+  <!-- StaffSync Modern Stylized "S" Logo Mark -->
+  <path d="M 174 20 L 68 20 A 40 40 0 1 0 94.4 90.0 L 174 20 Z" fill="#FFFFFF"/>
+  <path d="M 26 180 L 132 180 A 40 40 0 1 0 105.6 110.0 L 26 180 Z" fill="#FFFFFF"/>
+</svg>

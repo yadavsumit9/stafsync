@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
+import { ProjectLogo } from '../common/ProjectLogo';
 
 interface LoginPageProps {
   onSuccess: (role: 'admin' | 'staff') => void;
@@ -66,19 +67,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 relative z-10 animate-in fade-in zoom-in-95">
         {/* Brand Header matching reference aesthetics */}
         <div className="flex flex-col items-center text-center pb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#087A4B] to-[#044D2F] flex items-center justify-center text-white shadow-sm mb-3">
-            <svg
-              className="w-6 h-6"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
-          </div>
+          <ProjectLogo size="lg" variant="badge" className="mb-3.5 shadow-md" />
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">
             StaffSync Attendance OS
           </h2>
@@ -108,7 +97,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 value={usernameOrId}
                 onChange={(e) => setUsernameOrId(e.target.value)}
                 placeholder="e.g. EMP009, Aman Verma, ADMIN001, or email"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-normal text-slate-900 rounded-xl border border-slate-200 focus:border-[#087A4B] focus:ring-1 focus:ring-[#087A4B] outline-none transition-all"
+                className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-normal text-slate-900 rounded-xl border border-slate-200 focus:border-[#087A4B] focus:ring-1 focus:ring-[#087A4B] outline-none transition-all"
                 required
               />
             </div>
@@ -132,13 +121,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password (e.g. staff123 or admin123)"
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-normal text-slate-900 rounded-xl border border-slate-200 focus:border-[#087A4B] focus:ring-1 focus:ring-[#087A4B] outline-none transition-all"
+                className="w-full pl-10 pr-10 py-3 min-h-[44px] bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-normal text-slate-900 rounded-xl border border-slate-200 focus:border-[#087A4B] focus:ring-1 focus:ring-[#087A4B] outline-none transition-all"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -159,7 +148,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
           <button
             type="submit"
-            className="w-full py-2.5 bg-[#087A4B] hover:bg-[#065A37] text-white rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer mt-2"
+            className="w-full min-h-[46px] py-3 bg-[#087A4B] hover:bg-[#065A37] text-white rounded-xl font-semibold text-xs sm:text-sm transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer mt-2"
           >
             <span>Sign In to System</span>
           </button>
