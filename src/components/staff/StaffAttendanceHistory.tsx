@@ -20,7 +20,6 @@ export const StaffAttendanceHistory: React.FC = () => {
   const { currentUser, employees, attendance } = useAttendance();
   const currentEmp =
     employees.find((e) => e.id === currentUser?.employeeId) ||
-    employees.find((e) => e.id === 'EMP002') ||
     employees[0];
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');

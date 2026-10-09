@@ -21,7 +21,6 @@ export const StaffProfile: React.FC = () => {
 
   const currentEmp =
     employees.find((e) => e.id === currentUser?.employeeId) ||
-    employees.find((e) => e.id === 'EMP002') ||
     employees[0];
 
   const assignedShift = shifts.find((s) => s.id === currentEmp?.shiftId);

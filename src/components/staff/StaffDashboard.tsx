@@ -55,12 +55,17 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   // Find active employee record
   const currentEmp =
     employees.find((e) => e.id === currentUser?.employeeId) ||
-    employees.find((e) => e.id === 'EMP002') || // Janhavi Dev fallback
     employees[0];
 
   const assignedShift = shifts.find((s) => s.id === currentEmp?.shiftId) || shifts[0];
 
-  const todayStr = '2026-10-07';
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const formattedToday = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
   const todayRecord = attendance.find(
     (r) => r.employeeId === currentEmp?.id && r.date === todayStr
   );
@@ -79,7 +84,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   }, [currentEmp?.id, currentEmp?.defaultWorkMode, todayRecord?.workMode]);
 
   // Live elapsed counter simulation for "WORKING" state
-  const [elapsedMinutes, setElapsedMinutes] = useState(todayRecord?.workingHoursMinutes || 270);
+  const [elapsedMinutes, setElapsedMinutes] = useState(todayRecord?.workingHoursMinutes || 0);
 
   useEffect(() => {
     let interval: any;
@@ -137,7 +142,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             Good Morning, {currentEmp?.name}
           </h1>
           <p className="text-sm font-normal text-slate-500 mt-1">
-            Wednesday, 7 October 2026 · Standard Shift: {assignedShift.startTime} to {assignedShift.endTime}
+            {formattedToday} · Standard Shift: {assignedShift.startTime} to {assignedShift.endTime}
           </p>
         </div>
 
@@ -465,7 +470,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {personalHistory.map((rec) => (
+                  {personalHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                        No personal attendance logs recorded yet. Punch in to start tracking.
+                      </td>
+                    </tr>
+                  ) : (
+                    personalHistory.map((rec) => (
                     <tr key={rec.id} className="hover:bg-slate-50/70">
                       <td className="py-3 px-4 font-mono font-medium text-slate-900">{rec.date}</td>
                       <td className="py-3 px-4 font-mono text-slate-800">{rec.punchIn || '--:--'}</td>
@@ -496,8 +508,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         </span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
+                  ))
+                )}
+              </tbody>
               </table>
             </div>
           </div>

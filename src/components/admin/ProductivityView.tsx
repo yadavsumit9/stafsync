@@ -102,8 +102,18 @@ export const ProductivityView: React.FC = () => {
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {filteredScores.map((s) => {
+      {filteredScores.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 shadow-xs">
+          <p className="text-sm font-semibold text-slate-800">No Employee Attendance Records</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {employees.length === 0
+              ? 'No employees registered yet. Add employees through the Admin Panel to see consistency scores.'
+              : 'No employees matched the selected search or department filter.'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {filteredScores.map((s) => {
           return (
             <div
               key={s.employee.id}
@@ -174,6 +184,7 @@ export const ProductivityView: React.FC = () => {
           );
         })}
       </div>
+    )}
     </div>
   );
 };

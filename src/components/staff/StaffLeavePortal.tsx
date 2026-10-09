@@ -18,14 +18,14 @@ export const StaffLeavePortal: React.FC = () => {
 
   const currentEmp =
     employees.find((e) => e.id === currentUser?.employeeId) ||
-    employees.find((e) => e.id === 'EMP002') ||
     employees[0];
 
   const myLeaves = leaves.filter((l) => l.employeeId === currentEmp?.id);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const [leaveType, setLeaveType] = useState<LeaveType>('Casual Leave');
-  const [startDate, setStartDate] = useState('2026-10-12');
-  const [endDate, setEndDate] = useState('2026-10-13');
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(todayStr);
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [toastMsg, setToastMsg] = useState('');

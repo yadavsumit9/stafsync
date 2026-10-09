@@ -26,12 +26,13 @@ export const LeaveManagement: React.FC = () => {
   const [reviewModalLeave, setReviewModalLeave] = useState<LeaveRequest | null>(null);
   const [reviewRemarks, setReviewRemarks] = useState('');
 
+  const todayStr = new Date().toISOString().slice(0, 10);
   // Add Leave Form State
   const [leaveForm, setLeaveForm] = useState({
-    employeeId: employees[0]?.id || 'EMP001',
+    employeeId: employees[0]?.id || '',
     leaveType: 'Casual Leave' as LeaveType,
-    startDate: '2026-10-08',
-    endDate: '2026-10-09',
+    startDate: todayStr,
+    endDate: todayStr,
     reason: '',
     notes: '',
   });
@@ -334,12 +335,17 @@ export const LeaveManagement: React.FC = () => {
                   value={leaveForm.employeeId}
                   onChange={(e) => setLeaveForm({ ...leaveForm, employeeId: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                  disabled={employees.length === 0}
                 >
-                  {employees.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} ({e.id}) - {e.department}
-                    </option>
-                  ))}
+                  {employees.length === 0 ? (
+                    <option value="">No employees registered yet</option>
+                  ) : (
+                    employees.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name} ({e.id}) - {e.department}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

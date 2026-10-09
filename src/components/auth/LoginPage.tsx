@@ -4,23 +4,21 @@ import {
   User,
   Eye,
   EyeOff,
-  ShieldCheck,
-  CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  Key,
+  CheckCircle2,
   X,
-  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
 import { ProjectLogo } from '../common/ProjectLogo';
+import { ForcePasswordChangeModal } from './ForcePasswordChangeModal';
 
 interface LoginPageProps {
   onSuccess: (role: 'admin' | 'staff') => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
-  const { login, branding } = useAttendance();
+  const { login, branding, mustChangePasswordState } = useAttendance();
 
   const [usernameOrId, setUsernameOrId] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +28,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+  const [showForceChange, setShowForceChange] = useState(mustChangePasswordState);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,19 +40,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     }
 
     const res = login(usernameOrId, password);
-    if (res.success && res.role) {
-      onSuccess(res.role);
+    if (res.success) {
+      if (res.mustChangePassword) {
+        setShowForceChange(true);
+      } else if (res.role) {
+        onSuccess(res.role);
+      }
     } else {
       setErrorMessage(res.message || 'Invalid credentials. Please verify your ID and password.');
-    }
-  };
-
-  const handleQuickLogin = (id: string, pass: string) => {
-    setUsernameOrId(id);
-    setPassword(pass);
-    const res = login(id, pass);
-    if (res.success && res.role) {
-      onSuccess(res.role);
     }
   };
 
@@ -65,7 +59,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
 
       {/* Main Authentication Container */}
       <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 relative z-10 animate-in fade-in zoom-in-95">
-        {/* Brand Header matching reference aesthetics */}
+        {/* Brand Header */}
         <div className="flex flex-col items-center text-center pb-6">
           <ProjectLogo size="lg" variant="badge" className="mb-3.5 shadow-md" />
           <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">
@@ -88,7 +82,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs font-medium text-slate-700 block mb-1.5">
-              Employee ID, Name, or Admin ID
+              Employee ID or Admin ID
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -96,9 +90,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 type="text"
                 value={usernameOrId}
                 onChange={(e) => setUsernameOrId(e.target.value)}
-                placeholder="e.g. EMP009, Aman Verma, ADMIN001, or email"
+                placeholder="Enter Employee ID or Admin ID"
                 className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-normal text-slate-900 rounded-xl border border-slate-200 focus:border-[#087A4B] focus:ring-1 focus:ring-[#087A4B] outline-none transition-all"
                 required
+                autoComplete="username"
               />
             </div>
           </div>
@@ -120,14 +115,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password (e.g. staff123 or admin123)"
+                placeholder="Enter your password"
                 className="w-full pl-10 pr-10 py-3 min-h-[44px] bg-slate-50/70 focus:bg-white text-xs sm:text-sm font-normal text-slate-900 rounded-xl border border-slate-200 focus:border-[#087A4B] focus:ring-1 focus:ring-[#087A4B] outline-none transition-all"
                 required
+                autoComplete="current-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -154,87 +151,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           </button>
         </form>
 
-        {/* 1-Click Demo Accounts Bar */}
-        <div className="mt-6 pt-5 border-t border-slate-100">
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              1-Click Instant Demo Login:
-            </span>
-            <span className="text-[10px] text-emerald-700 font-mono">Password: prefilled</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={() => handleQuickLogin('ADMIN001', 'admin123')}
-              className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70 text-left transition-colors"
-            >
-              <div className="flex items-center gap-1.5 font-semibold text-[#087A4B]">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Admin Portal</span>
-              </div>
-              <span className="text-[11px] font-normal text-slate-600 block mt-0.5">ADMIN001 (Devendra)</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('EMP009', 'staff123')}
-              className="p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-left transition-colors ring-1 ring-emerald-400/30"
-            >
-              <div className="flex items-center gap-1.5 font-semibold text-emerald-900">
-                <Sparkles className="w-3.5 h-3.5 text-[#087A4B]" />
-                <span>Staff: Aman Verma</span>
-              </div>
-              <span className="text-[10px] font-medium text-emerald-700 block mt-0.5">EMP009 (Flexible WFH/Office)</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('EMP002', 'staff123')}
-              className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-slate-100 text-left transition-colors"
-            >
-              <div className="flex items-center gap-1.5 font-medium text-slate-900">
-                <User className="w-3.5 h-3.5" />
-                <span>Staff: Janhavi Dev</span>
-              </div>
-              <span className="text-[11px] font-normal text-slate-500 block mt-0.5">EMP002 (Designer)</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('EMP003', 'staff123')}
-              className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-slate-100 text-left transition-colors"
-            >
-              <div className="flex items-center gap-1.5 font-medium text-slate-900">
-                <Lock className="w-3.5 h-3.5 text-slate-400" />
-                <span>Staff: Amit Sharma</span>
-              </div>
-              <span className="text-[11px] font-normal text-slate-500 block mt-0.5">EMP003 (Locked to Office)</span>
-            </button>
-          </div>
-        </div>
-
         {/* Footer info note */}
-        <div className="mt-5 text-center text-[11px] text-slate-400">
+        <div className="mt-6 pt-5 border-t border-slate-100 text-center text-[11px] text-slate-400">
           <span>Self-registration is closed. Accounts are provisioned exclusively by HR Admin.</span>
         </div>
       </div>
+
+      {/* Forced Password Change Modal */}
+      {(showForceChange || mustChangePasswordState) && (
+        <ForcePasswordChangeModal
+          onSuccess={() => {
+            setShowForceChange(false);
+            onSuccess('admin');
+          }}
+        />
+      )}
 
       {/* Forgot Password Dialog */}
       {showForgotModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-              <h3 className="text-sm font-bold text-slate-900">Password Recovery</h3>
-              <button onClick={() => setShowForgotModal(false)} className="text-slate-400">
+              <h3 className="text-sm font-bold text-slate-900">Credential Support</h3>
+              <button onClick={() => setShowForgotModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
             {!forgotSent ? (
               <div className="space-y-3 text-xs">
-                <p className="text-slate-600">
-                  Please enter your registered Employee ID or email to submit a secure recovery request
-                  to your HR Administrator.
+                <p className="text-slate-600 leading-relaxed">
+                  Please enter your registered Employee ID or Corporate Email. A credential assistance ticket will be forwarded to your HR Administrator.
                 </p>
                 <input
                   type="text"
-                  placeholder="Employee ID or Email"
+                  placeholder="Employee ID or Corporate Email"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
@@ -242,19 +192,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 <button
                   type="button"
                   onClick={() => setForgotSent(true)}
-                  className="w-full py-2 bg-[#087A4B] text-white rounded-xl font-bold"
+                  className="w-full py-2.5 bg-[#087A4B] hover:bg-[#065A37] text-white rounded-xl font-bold cursor-pointer transition-colors"
                 >
-                  Send Reset Request
+                  Submit Recovery Request
                 </button>
               </div>
             ) : (
               <div className="space-y-3 text-xs text-center py-2">
                 <CheckCircle2 className="w-8 h-8 text-[#087A4B] mx-auto" />
-                <p className="font-semibold text-slate-900">Reset Request Dispatched</p>
-                <p className="text-slate-500">
-                  HR Administration has received your reset request. Default demo passwords remain{' '}
-                  <code className="text-emerald-700 font-mono">admin123</code> or{' '}
-                  <code className="text-emerald-700 font-mono">staff123</code>.
+                <p className="font-semibold text-slate-900">Request Forwarded</p>
+                <p className="text-slate-500 leading-relaxed">
+                  Your request has been routed to System Administration. An administrator will verify your identity and issue credential instructions.
                 </p>
                 <button
                   type="button"
@@ -262,7 +210,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                     setShowForgotModal(false);
                     setForgotSent(false);
                   }}
-                  className="w-full py-2 bg-slate-900 text-white rounded-xl font-semibold"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold cursor-pointer"
                 >
                   Return to Sign In
                 </button>

@@ -24,6 +24,41 @@ import { StaffMobileBottomNav } from './components/staff/StaffMobileBottomNav';
 import { useViewport } from './hooks/useViewport';
 import { ShieldAlert, ArrowLeft, Bell, User, LogOut } from 'lucide-react';
 
+function getTabLabel(tab: string, defaultName = 'StaffSync'): string {
+  switch (tab) {
+    case 'dashboard':
+      return 'Dashboard';
+    case 'employees':
+      return 'Employee Directory';
+    case 'attendance':
+      return 'Attendance Management';
+    case 'calendar':
+      return 'Attendance Calendar';
+    case 'leaves':
+      return 'Leave Management';
+    case 'shifts':
+      return 'Shift Schedules';
+    case 'holidays':
+      return 'Holiday Calendar';
+    case 'reports':
+      return 'Reports & Export';
+    case 'productivity':
+      return 'Productivity Insights';
+    case 'analytics':
+      return 'Workforce Analytics';
+    case 'settings':
+      return 'System Settings';
+    case 'audit':
+      return 'Audit Trail';
+    case 'profile':
+      return 'My Profile & Pass';
+    case 'branding':
+      return 'Company Branding';
+    default:
+      return defaultName;
+  }
+}
+
 function MainApp() {
   const { currentUser, logout, leaves, notifications, branding } = useAttendance();
   const { width, isMobile, isAdminSupported } = useViewport();
@@ -282,30 +317,6 @@ function MainApp() {
             onOpenLeaveModal={() => setCurrentTab('leaves')}
           />
         );
-    }
-  };
-
-  // Helper title for non-dashboard mobile views
-  const getTabLabel = (tab: string) => {
-    switch (tab) {
-      case 'attendance':
-        return 'My Attendance';
-      case 'calendar':
-        return 'Attendance Calendar';
-      case 'leaves':
-        return 'Leave Applications';
-      case 'profile':
-        return 'My Profile & Pass';
-      case 'shifts':
-        return 'Shift Information';
-      case 'holidays':
-        return 'Holidays Schedule';
-      case 'settings':
-        return 'System Settings';
-      case 'branding':
-        return 'Company Branding';
-      default:
-        return branding?.projectName || 'StaffSync';
     }
   };
 

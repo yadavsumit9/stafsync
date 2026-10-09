@@ -69,8 +69,8 @@ export const EmployeeManagement: React.FC = () => {
     allowFlexibleWorkMode: false,
     weeklyOffDays: ['Sunday', 'Saturday'],
     status: 'Active' as 'Active' | 'Inactive',
-    password: 'staff123',
-    confirmPassword: 'staff123',
+    password: '',
+    confirmPassword: '',
   });
   const [formError, setFormError] = useState('');
 
@@ -96,32 +96,39 @@ export const EmployeeManagement: React.FC = () => {
       return;
     }
 
+    if (!formData.password || formData.password.length < 8) {
+      setFormError('Password must be at least 8 characters long.');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setFormError('Passwords do not match.');
       return;
     }
 
-    const res = addEmployee({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      gender: formData.gender,
-      dob: formData.dob,
-      address: formData.address || 'Company Headquarters',
-      emergencyContact: formData.emergencyContact || 'Pending Submission',
-      department: formData.department,
-      position: formData.position,
-      designation: formData.designation,
-      joiningDate: formData.joiningDate,
-      employmentType: formData.employmentType,
-      shiftId: formData.shiftId,
-      defaultWorkMode: formData.defaultWorkMode,
-      allowFlexibleWorkMode: formData.allowFlexibleWorkMode,
-      weeklyOffDays: formData.weeklyOffDays,
-      status: formData.status,
-      accountUsername: formData.email.split('@')[0],
-      password: formData.password,
-    });
+    const res = addEmployee(
+      {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        gender: formData.gender,
+        dob: formData.dob,
+        address: formData.address || 'Company Headquarters',
+        emergencyContact: formData.emergencyContact || 'Pending Submission',
+        department: formData.department,
+        position: formData.position,
+        designation: formData.designation,
+        joiningDate: formData.joiningDate,
+        employmentType: formData.employmentType,
+        shiftId: formData.shiftId,
+        defaultWorkMode: formData.defaultWorkMode,
+        allowFlexibleWorkMode: formData.allowFlexibleWorkMode,
+        weeklyOffDays: formData.weeklyOffDays,
+        status: formData.status,
+        accountUsername: formData.email.split('@')[0],
+      },
+      formData.password
+    );
 
     if (res.success) {
       setSuccessToast(`Account created for ${formData.name} (${res.employeeId})!`);
@@ -139,15 +146,15 @@ export const EmployeeManagement: React.FC = () => {
         department: 'Engineering',
         position: 'Software Engineer',
         designation: 'Developer',
-        joiningDate: '2026-10-01',
+        joiningDate: new Date().toISOString().slice(0, 10),
         employmentType: 'Full Time',
         shiftId: 'SHIFT_GEN',
         defaultWorkMode: 'OFFICE',
         allowFlexibleWorkMode: false,
         weeklyOffDays: ['Sunday', 'Saturday'],
         status: 'Active',
-        password: 'staff123',
-        confirmPassword: 'staff123',
+        password: '',
+        confirmPassword: '',
       });
     } else {
       setFormError(res.message);
@@ -248,31 +255,51 @@ export const EmployeeManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Employees Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[11px]">
-                <th className="py-3.5 px-4">Employee</th>
-                <th className="py-3.5 px-4">Employee ID</th>
-                <th className="py-3.5 px-4">Department & Role</th>
-                <th className="py-3.5 px-4">Contact</th>
-                <th className="py-3.5 px-4">Shift</th>
-                <th className="py-3.5 px-4">Mode</th>
-                <th className="py-3.5 px-4">Joining Date</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {filteredEmployees.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    No employees found matching filter criteria.
-                  </td>
+      {/* Employees Table or Empty State (Requirement 16) */}
+      {employees.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-12 text-center max-w-lg mx-auto my-8 space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-[#087A4B] flex items-center justify-center mx-auto border border-emerald-200">
+            <Users className="w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">No employees yet.</h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Add your first employee to start managing attendance.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#087A4B] hover:bg-[#065A37] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>+ Add Employee</span>
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-medium uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 px-4">Employee</th>
+                  <th className="py-3.5 px-4">Employee ID</th>
+                  <th className="py-3.5 px-4">Department & Role</th>
+                  <th className="py-3.5 px-4">Contact</th>
+                  <th className="py-3.5 px-4">Shift</th>
+                  <th className="py-3.5 px-4">Mode</th>
+                  <th className="py-3.5 px-4">Joining Date</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
-              ) : (
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {filteredEmployees.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                      No employees found matching filter criteria.
+                    </td>
+                  </tr>
+                ) : (
                 filteredEmployees.map((emp) => {
                   const shift = shifts.find((s) => s.id === emp.shiftId);
                   return (
@@ -404,6 +431,7 @@ export const EmployeeManagement: React.FC = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Digital ID View Modal */}
       {viewingEmployee && (
@@ -458,10 +486,10 @@ export const EmployeeManagement: React.FC = () => {
               <div>
                 <label className="font-semibold text-slate-700 block mb-1">New Password</label>
                 <input
-                  type="text"
+                  type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="e.g. staff123"
+                  placeholder="Enter new secure password (min 8 chars)"
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#087A4B] outline-none"
                   required
                 />

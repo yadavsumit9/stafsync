@@ -35,7 +35,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onOpenAddEmployee,
   onOpenAddLeave,
 }) => {
-  const { employees, attendance, leaves, shifts, resetAllData } = useAttendance();
+  const { employees, attendance, leaves, shifts, refreshData } = useAttendance();
 
   const [timeFilter, setTimeFilter] = useState<'Today' | 'This Week' | 'This Month'>('Today');
   const [chartView, setChartView] = useState<'Weekly' | 'Monthly'>('Monthly');
@@ -45,20 +45,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [activeTooltipIndex, setActiveTooltipIndex] = useState<number | null>(2); // Default active bar like reference image!
 
-  const todayStr = '2026-10-07';
+  const todayStr = new Date().toISOString().slice(0, 10);
   const todayRecords = attendance.filter((r) => r.date === todayStr);
 
-  // Statistics calculation
+  // Statistics calculation (Requirement 15: Clean 0 state)
   const totalEmployees = employees.length;
   const presentToday = todayRecords.filter((r) => r.status === 'PRESENT' || r.status === 'WORKING').length;
   const lateToday = todayRecords.filter((r) => r.status === 'LATE').length;
   const onLeaveToday = todayRecords.filter((r) => r.status === 'ON LEAVE').length;
   const weekOffToday = todayRecords.filter((r) => r.status === 'WEEK OFF').length;
   const notPunchedIn = todayRecords.filter((r) => r.status === 'NOT PUNCHED IN').length;
+  const absentToday = totalEmployees > 0 ? Math.max(0, totalEmployees - (presentToday + lateToday + onLeaveToday + weekOffToday)) : 0;
   const attendanceRate = totalEmployees > 0 ? Math.round(((presentToday + lateToday) / totalEmployees) * 100) : 0;
 
   // Department counts
-  const departments = ['Engineering', 'Design', 'Operations', 'Human Resources'];
+  const availableDepts = Array.from(new Set(employees.map((e) => e.department).filter(Boolean)));
+  const departments = availableDepts.length > 0 ? availableDepts : ['Engineering', 'Design', 'Operations', 'Human Resources'];
 
   // Filtered today's attendance table
   const filteredRecords = todayRecords.filter((r) => {
@@ -71,26 +73,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return matchesSearch && matchesDept && matchesStatus;
   });
 
-  // Chart data points
-  const monthlyData = [
-    { label: 'Jan', rate: 84, hours: '7.8h', count: 114 },
-    { label: 'Feb', rate: 88, hours: '8.0h', count: 118 },
-    { label: 'Mar', rate: 96, hours: '8.4h', count: 124 }, // Highlighted bar like reference
-    { label: 'Apr', rate: 90, hours: '8.1h', count: 120 },
-    { label: 'May', rate: 92, hours: '8.2h', count: 122 },
-    { label: 'Jun', rate: 86, hours: '7.9h', count: 116 },
-    { label: 'Jul', rate: 94, hours: '8.3h', count: 125 },
-  ];
+  // Dynamic Chart data computed from real attendance
+  const hasAttendanceData = attendance.length > 0;
+  const currentChartData: { label: string; rate: number; hours: string; count: number }[] = [];
 
-  const weeklyData = [
-    { label: 'Mon', rate: 95, hours: '8.3h', count: 126 },
-    { label: 'Tue', rate: 92, hours: '8.1h', count: 122 },
-    { label: 'Wed', rate: 98, hours: '8.5h', count: 128 },
-    { label: 'Thu', rate: 90, hours: '8.0h', count: 120 },
-    { label: 'Fri', rate: 88, hours: '7.9h', count: 118 },
-  ];
-
-  const currentChartData = chartView === 'Monthly' ? monthlyData : weeklyData;
+  if (hasAttendanceData) {
+    if (chartView === 'Weekly') {
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dStr = d.toISOString().slice(0, 10);
+        const dayRecs = attendance.filter((r) => r.date === dStr);
+        const pres = dayRecs.filter((r) => r.status === 'PRESENT' || r.status === 'WORKING' || r.status === 'LATE').length;
+        const rate = totalEmployees > 0 ? Math.min(100, Math.round((pres / totalEmployees) * 100)) : 0;
+        const avgHrs = dayRecs.length > 0 ? (dayRecs.reduce((a, b) => a + (b.workingHoursMinutes || 0), 0) / dayRecs.length / 60).toFixed(1) : '0.0';
+        currentChartData.push({
+          label: dayNames[d.getDay()],
+          rate,
+          hours: `${avgHrs}h`,
+          count: pres,
+        });
+      }
+    } else {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const yMonth = d.toISOString().slice(0, 7);
+        const mRecs = attendance.filter((r) => r.date.startsWith(yMonth));
+        const pres = mRecs.filter((r) => r.status === 'PRESENT' || r.status === 'WORKING' || r.status === 'LATE').length;
+        const rate = mRecs.length > 0 ? Math.min(100, Math.round((pres / mRecs.length) * 100)) : 0;
+        const avgHrs = mRecs.length > 0 ? (mRecs.reduce((a, b) => a + (b.workingHoursMinutes || 0), 0) / mRecs.length / 60).toFixed(1) : '0.0';
+        currentChartData.push({
+          label: monthNames[d.getMonth()],
+          rate,
+          hours: `${avgHrs}h`,
+          count: pres,
+        });
+      }
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in">
@@ -118,17 +141,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Reset Data Button */}
+          {/* Refresh Data Button */}
           <button
             onClick={() => {
-              if (confirm('Restore demo attendance data to defaults?')) {
-                resetAllData();
-              }
+              refreshData();
             }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200/90 hover:bg-slate-50 rounded-xl shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200/90 hover:bg-slate-50 rounded-xl shadow-xs transition-colors cursor-pointer"
+            title="Refresh records from database"
           >
             <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-            <span>Reset Data</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -161,7 +183,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {totalEmployees}
             </span>
             <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-xs">
-              +4 this month ↑
+              {totalEmployees === 0 ? '0 registered' : `${totalEmployees} active`}
             </span>
           </div>
 
@@ -244,10 +266,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           <div className="my-5 flex items-baseline gap-2.5">
             <span className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight font-mono">
-              {onLeaveToday + weekOffToday}
+              {onLeaveToday + weekOffToday + absentToday}
             </span>
             <span className="inline-flex items-center text-xs font-normal text-slate-500 font-mono">
-              {onLeaveToday} Leaves · {weekOffToday} Off
+              {onLeaveToday} Leaves · {weekOffToday} Off · {absentToday} Absent
             </span>
           </div>
 
@@ -338,7 +360,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div>
               <span className="text-xs text-slate-400 font-normal">Attendance & Punctuality Trend</span>
               <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-mono mt-0.5">
-                94.8% Average Rate
+                {attendanceRate}% Average Rate
               </div>
             </div>
 
@@ -367,74 +389,82 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          {/* SVG Bar Chart with Tooltip matching the reference cash flow graphic */}
-          <div className="relative mt-6 pt-4 h-52 flex items-end justify-between px-2 sm:px-6">
-            {/* Interactive Tooltip Card pinned over selected bar */}
-            {activeTooltipIndex !== null && currentChartData[activeTooltipIndex] && (
-              <div
-                className="absolute z-20 top-0 bg-[#18181B] text-white rounded-xl p-2.5 shadow-xl text-xs space-y-1 animate-in fade-in zoom-in-95 pointer-events-none"
-                style={{
-                  left: `${(activeTooltipIndex / (currentChartData.length - 1)) * 80 + 10}%`,
-                  transform: 'translateX(-50%)',
-                }}
-              >
-                <div className="font-semibold text-slate-200 border-b border-white/10 pb-1">
-                  {currentChartData[activeTooltipIndex].label} 2026 Record
-                </div>
-                <div className="flex items-center justify-between gap-4 text-emerald-400 font-mono">
-                  <span>Attendance:</span>
-                  <span>{currentChartData[activeTooltipIndex].rate}%</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 text-slate-300 font-mono text-[11px]">
-                  <span>Avg Hours:</span>
-                  <span>{currentChartData[activeTooltipIndex].hours}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Left Y-axis labels */}
-            <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] font-mono text-slate-400 pointer-events-none">
-              <span>100%</span>
-              <span>75%</span>
-              <span>50%</span>
-              <span>25%</span>
-              <span>0%</span>
+          {/* SVG Bar Chart or Empty State */}
+          {currentChartData.length === 0 ? (
+            <div className="relative mt-6 pt-4 h-52 flex flex-col items-center justify-center text-center p-6 bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+              <TrendingUp className="w-8 h-8 text-slate-300 mb-2" />
+              <span className="text-xs font-semibold text-slate-700">No data available yet.</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Attendance charts will automatically populate once employees log shifts.</span>
             </div>
-
-            {/* Bars */}
-            <div className="w-full pl-8 h-full flex items-end justify-between gap-3 sm:gap-6">
-              {currentChartData.map((item, idx) => {
-                const isSelected = activeTooltipIndex === idx;
-                const heightPercent = item.rate;
-
-                return (
-                  <div
-                    key={item.label}
-                    onClick={() => setActiveTooltipIndex(idx)}
-                    className="flex-1 flex flex-col items-center gap-2 cursor-pointer group h-full justify-end"
-                  >
-                    <div className="w-full max-w-[42px] bg-slate-100 rounded-t-xl overflow-hidden h-full flex items-end">
-                      <div
-                        style={{ height: `${heightPercent}%` }}
-                        className={`w-full rounded-t-xl transition-all duration-300 ${
-                          isSelected
-                            ? 'bg-gradient-to-t from-[#087A4B] to-emerald-400 shadow-md ring-2 ring-[#087A4B]/20'
-                            : 'bg-emerald-100 group-hover:bg-emerald-200'
-                        }`}
-                      />
-                    </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        isSelected ? 'text-[#087A4B] font-bold' : 'text-slate-500'
-                      }`}
-                    >
-                      {item.label}
-                    </span>
+          ) : (
+            <div className="relative mt-6 pt-4 h-52 flex items-end justify-between px-2 sm:px-6">
+              {/* Interactive Tooltip Card pinned over selected bar */}
+              {activeTooltipIndex !== null && currentChartData[activeTooltipIndex] && (
+                <div
+                  className="absolute z-20 top-0 bg-[#18181B] text-white rounded-xl p-2.5 shadow-xl text-xs space-y-1 animate-in fade-in zoom-in-95 pointer-events-none"
+                  style={{
+                    left: `${(activeTooltipIndex / (currentChartData.length - 1)) * 80 + 10}%`,
+                    transform: 'translateX(-50%)',
+                  }}
+                >
+                  <div className="font-semibold text-slate-200 border-b border-white/10 pb-1">
+                    {currentChartData[activeTooltipIndex].label} Record
                   </div>
-                );
-              })}
+                  <div className="flex items-center justify-between gap-4 text-emerald-400 font-mono">
+                    <span>Attendance:</span>
+                    <span>{currentChartData[activeTooltipIndex].rate}%</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 text-slate-300 font-mono text-[11px]">
+                    <span>Avg Hours:</span>
+                    <span>{currentChartData[activeTooltipIndex].hours}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Left Y-axis labels */}
+              <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] font-mono text-slate-400 pointer-events-none">
+                <span>100%</span>
+                <span>75%</span>
+                <span>50%</span>
+                <span>25%</span>
+                <span>0%</span>
+              </div>
+
+              {/* Bars */}
+              <div className="w-full pl-8 h-full flex items-end justify-between gap-3 sm:gap-6">
+                {currentChartData.map((item, idx) => {
+                  const isSelected = activeTooltipIndex === idx;
+                  const heightPercent = item.rate;
+
+                  return (
+                    <div
+                      key={item.label}
+                      onClick={() => setActiveTooltipIndex(idx)}
+                      className="flex-1 flex flex-col items-center gap-2 cursor-pointer group h-full justify-end"
+                    >
+                      <div className="w-full max-w-[42px] bg-slate-100 rounded-t-xl overflow-hidden h-full flex items-end">
+                        <div
+                          style={{ height: `${heightPercent}%` }}
+                          className={`w-full rounded-t-xl transition-all duration-300 ${
+                            isSelected
+                              ? 'bg-gradient-to-t from-[#087A4B] to-emerald-400 shadow-md ring-2 ring-[#087A4B]/20'
+                              : 'bg-emerald-100 group-hover:bg-emerald-200'
+                          }`}
+                        />
+                      </div>
+                      <span
+                        className={`text-xs font-medium ${
+                          isSelected ? 'text-[#087A4B] font-bold' : 'text-slate-500'
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -445,7 +475,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div>
             <h3 className="text-base font-bold text-slate-900">Today's Attendance</h3>
             <p className="text-xs text-slate-400">
-              Live biometric records for Wednesday, 7 October 2026 (Asia/Kolkata)
+              Live biometric records for {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} (Asia/Kolkata)
             </p>
           </div>
 
@@ -515,7 +545,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {filteredRecords.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
-                    No attendance records match your filter criteria.
+                    <Clock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="font-semibold text-slate-700 text-xs">No attendance records yet.</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Add your first employee to start managing attendance.</p>
                   </td>
                 </tr>
               ) : (

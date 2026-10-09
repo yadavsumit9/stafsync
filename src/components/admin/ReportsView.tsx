@@ -17,11 +17,25 @@ import { useAttendance } from '../../context/AttendanceContext';
 export const ReportsView: React.FC = () => {
   const { employees, attendance, branding } = useAttendance();
 
+  const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [reportType, setReportType] = useState<'monthly' | 'weekly'>('monthly');
-  const [selectedMonth, setSelectedMonth] = useState('2026-10');
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
 
   const departments = ['Engineering', 'Design', 'Operations', 'Human Resources', 'Marketing', 'Finance'];
+
+  // Generate dynamic past 7 days ending today
+  const past7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const iso = d.toISOString().slice(0, 10);
+    const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const isToday = i === 6;
+    return {
+      iso,
+      label: isToday ? `${dayLabel} (Today)` : dayLabel,
+    };
+  });
 
   // Filter employees
   const targetEmployees = employees.filter(
@@ -268,7 +282,7 @@ export const ReportsView: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-slate-100">
             <h3 className="text-sm font-bold text-slate-900">
-              Weekly Attendance Matrix (October 1 to October 7, 2026)
+              Weekly Attendance Matrix (Last 7 Days)
             </h3>
           </div>
           <div className="overflow-x-auto">
@@ -276,65 +290,63 @@ export const ReportsView: React.FC = () => {
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                   <th className="py-3 px-4">Staff Member</th>
-                  <th className="py-3 px-3 text-center">Thu (Oct 1)</th>
-                  <th className="py-3 px-3 text-center">Fri (Oct 2 - Hol)</th>
-                  <th className="py-3 px-3 text-center">Sat (Oct 3)</th>
-                  <th className="py-3 px-3 text-center">Sun (Oct 4)</th>
-                  <th className="py-3 px-3 text-center">Mon (Oct 5)</th>
-                  <th className="py-3 px-3 text-center">Tue (Oct 6)</th>
-                  <th className="py-3 px-3 text-center">Wed (Oct 7 - Today)</th>
+                  {past7Days.map((d) => (
+                    <th key={d.iso} className="py-3 px-3 text-center">{d.label}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {targetEmployees.map((emp) => {
-                  const dates = [
-                    '2026-10-01',
-                    '2026-10-02',
-                    '2026-10-03',
-                    '2026-10-04',
-                    '2026-10-05',
-                    '2026-10-06',
-                    '2026-10-07',
-                  ];
+                {targetEmployees.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-slate-400 text-xs">
+                      No employees registered yet. Add employees through the Admin Panel.
+                    </td>
+                  </tr>
+                ) : (
+                  targetEmployees.map((emp) => {
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50/70">
+                        <td className="py-3.5 px-4">
+                          <span className="font-semibold text-slate-900 block">{emp.name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{emp.id}</span>
+                        </td>
+                        {past7Days.map((d) => {
+                          const rec = attendance.find((r) => r.employeeId === emp.id && r.date === d.iso);
+                          const status = rec?.status;
 
-                  return (
-                    <tr key={emp.id} className="hover:bg-slate-50/70">
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-slate-900 block">{emp.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{emp.id}</span>
-                      </td>
-                      {dates.map((d) => {
-                        const rec = attendance.find((r) => r.employeeId === emp.id && r.date === d);
-                        const status = rec?.status || 'WEEK OFF';
-
-                        return (
-                          <td key={d} className="py-3.5 px-3 text-center">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                status === 'PRESENT' || status === 'WORKING'
-                                  ? 'bg-emerald-50 text-emerald-700'
-                                  : status === 'LATE'
-                                  ? 'bg-amber-50 text-amber-700'
-                                  : status === 'ON LEAVE'
-                                  ? 'bg-blue-50 text-blue-700'
-                                  : status === 'HOLIDAY'
-                                  ? 'bg-purple-50 text-purple-700'
-                                  : 'bg-slate-100 text-slate-500'
-                              }`}
-                            >
-                              {status === 'PRESENT' || status === 'WORKING' ? 'Present' : status}
-                            </span>
-                            {rec?.workingHoursMinutes ? (
-                              <span className="block text-[9px] text-slate-400 font-mono mt-0.5">
-                                {formatHours(rec.workingHoursMinutes)}
-                              </span>
-                            ) : null}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
+                          return (
+                            <td key={d.iso} className="py-3.5 px-3 text-center">
+                              {status ? (
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                    status === 'PRESENT' || status === 'WORKING'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : status === 'LATE'
+                                      ? 'bg-amber-50 text-amber-700'
+                                      : status === 'ON LEAVE'
+                                      ? 'bg-blue-50 text-blue-700'
+                                      : status === 'HOLIDAY'
+                                      ? 'bg-purple-50 text-purple-700'
+                                      : 'bg-slate-100 text-slate-500'
+                                  }`}
+                                >
+                                  {status === 'PRESENT' || status === 'WORKING' ? 'Present' : status}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-300 font-mono">-</span>
+                              )}
+                              {rec?.workingHoursMinutes ? (
+                                <span className="block text-[9px] text-slate-400 font-mono mt-0.5">
+                                  {formatHours(rec.workingHoursMinutes)}
+                                </span>
+                              ) : null}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

@@ -22,17 +22,29 @@ export const AnalyticsView: React.FC = () => {
   const leaveCount = attendance.filter((r) => r.status === 'ON LEAVE').length;
   const absentCount = attendance.filter((r) => r.status === 'ABSENT').length;
 
+  const validDays = attendance.filter((r) => r.status !== 'WEEK OFF' && r.status !== 'HOLIDAY').length;
+  const overallRate = validDays > 0 ? (((presentCount + lateCount) / validDays) * 100).toFixed(1) : '0.0';
+  const latePct = totalRecords > 0 ? ((lateCount / totalRecords) * 100).toFixed(1) : '0.0';
+
   const totalWorkMins = attendance.reduce((acc, r) => acc + (r.workingHoursMinutes || 0), 0);
   const avgMins = presentCount + lateCount > 0 ? Math.round(totalWorkMins / (presentCount + lateCount)) : 0;
+
+  const fullShiftCount = attendance.filter((r) => r.workingHoursMinutes >= 480 && r.workingHoursMinutes <= 540).length;
+  const overtimeCount = attendance.filter((r) => r.workingHoursMinutes > 540).length;
+  const shortHoursCount = attendance.filter((r) => r.workingHoursMinutes > 0 && r.workingHoursMinutes < 360).length;
+
+  const fullShiftPct = totalRecords > 0 ? Math.round((fullShiftCount / totalRecords) * 100) : 0;
+  const overtimePct = totalRecords > 0 ? Math.round((overtimeCount / totalRecords) * 100) : 0;
+  const shortHoursPct = totalRecords > 0 ? Math.round((shortHoursCount / totalRecords) * 100) : 0;
 
   // Department comparison
   const depts = ['Engineering', 'Design', 'Operations', 'Human Resources', 'Marketing', 'Finance'];
   const deptStats = depts.map((d) => {
     const deptRecs = attendance.filter((r) => r.department === d);
-    const valid = deptRecs.filter((r) => r.status !== 'WEEK OFF' && r.status !== 'HOLIDAY').length || 1;
+    const valid = deptRecs.filter((r) => r.status !== 'WEEK OFF' && r.status !== 'HOLIDAY').length;
     const p = deptRecs.filter((r) => r.status === 'PRESENT' || r.status === 'WORKING').length;
     const l = deptRecs.filter((r) => r.status === 'LATE').length;
-    const rate = Math.round(((p + l) / valid) * 100);
+    const rate = valid > 0 ? Math.round(((p + l) / valid) * 100) : 0;
     return { name: d, rate, count: deptRecs.length };
   });
 
@@ -55,9 +67,11 @@ export const AnalyticsView: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
           <span className="text-xs text-slate-400 block font-normal">Overall Attendance Rate</span>
           <div className="mt-2 text-2xl sm:text-3xl font-bold text-[#087A4B] font-mono">
-            93.4%
+            {overallRate}%
           </div>
-          <span className="text-[11px] text-emerald-600 font-medium">+2.1% this quarter</span>
+          <span className="text-[11px] text-slate-500 font-normal">
+            {totalRecords > 0 ? `${presentCount + lateCount} of ${validDays} logged shifts` : 'No attendance data yet'}
+          </span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
@@ -73,7 +87,9 @@ export const AnalyticsView: React.FC = () => {
           <div className="mt-2 text-2xl sm:text-3xl font-bold text-amber-700 font-mono">
             {lateCount}
           </div>
-          <span className="text-[11px] text-amber-600 font-medium">4.8% of logged days</span>
+          <span className="text-[11px] text-amber-600 font-medium">
+            {latePct}% of logged days
+          </span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
@@ -126,21 +142,21 @@ export const AnalyticsView: React.FC = () => {
                   <span className="w-3 h-3 rounded-md bg-emerald-500" />
                   <span className="font-semibold text-slate-800">Full Standard Shift (8h - 9h)</span>
                 </div>
-                <span className="font-mono font-bold text-slate-900">76% of days</span>
+                <span className="font-mono font-bold text-slate-900">{fullShiftPct}% of days</span>
               </div>
               <div className="p-3.5 bg-slate-50 rounded-xl flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="w-3 h-3 rounded-md bg-teal-500" />
                   <span className="font-semibold text-slate-800">Overtime Recorded (&gt;9h)</span>
                 </div>
-                <span className="font-mono font-bold text-slate-900">14% of days</span>
+                <span className="font-mono font-bold text-slate-900">{overtimePct}% of days</span>
               </div>
               <div className="p-3.5 bg-slate-50 rounded-xl flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="w-3 h-3 rounded-md bg-amber-500" />
                   <span className="font-semibold text-slate-800">Half Day / Short Hours (&lt;6h)</span>
                 </div>
-                <span className="font-mono font-bold text-slate-900">4% of days</span>
+                <span className="font-mono font-bold text-slate-900">{shortHoursPct}% of days</span>
               </div>
             </div>
           </div>

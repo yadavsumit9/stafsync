@@ -53,11 +53,18 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
   // Active employee
   const currentEmp =
     employees.find((e) => e.id === currentUser?.employeeId) ||
-    employees.find((e) => e.id === 'EMP002') ||
     employees[0];
 
   const assignedShift = shifts.find((s) => s.id === currentEmp?.shiftId) || shifts[0];
-  const todayStr = '2026-10-07'; // System demo date: Wednesday, 7 October 2026
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const formattedToday = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const todayDayName = now.toLocaleDateString('en-US', { weekday: 'long' });
 
   const todayRecord = attendance.find(
     (r) => r.employeeId === currentEmp?.id && r.date === todayStr
@@ -84,22 +91,20 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
 
   // Apply Leave form state
   const [leaveType, setLeaveType] = useState<LeaveType>('Casual Leave');
-  const [leaveStartDate, setLeaveStartDate] = useState('2026-10-12');
-  const [leaveEndDate, setLeaveEndDate] = useState('2026-10-13');
+  const [leaveStartDate, setLeaveStartDate] = useState(todayStr);
+  const [leaveEndDate, setLeaveEndDate] = useState(todayStr);
   const [leaveReason, setLeaveReason] = useState('');
   const [leaveSubmitting, setLeaveSubmitting] = useState(false);
   const [leaveToast, setLeaveToast] = useState('');
 
   // Weekly Off detection
-  // Today is Wednesday
-  const todayDayName = 'Wednesday';
   const isTodayWeeklyOff =
     todayRecord?.status === 'WEEK OFF' ||
     Boolean(currentEmp?.weeklyOffDays?.includes(todayDayName));
 
   // Live timer for WORKING state
   const [elapsedMinutes, setElapsedMinutes] = useState(
-    todayRecord?.workingHoursMinutes || (todayRecord?.status === 'WORKING' ? 270 : 0)
+    todayRecord?.workingHoursMinutes || 0
   );
 
   useEffect(() => {
@@ -373,7 +378,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
                 Today's Attendance
               </span>
               <h3 className="text-sm font-semibold text-[#151515] mt-0.5">
-                Wednesday, 7 October 2026
+                {formattedToday}
               </h3>
             </div>
 

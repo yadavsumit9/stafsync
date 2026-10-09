@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenMobileMenu,
   onOpenQuickAction,
 }) => {
-  const { currentUser, logout, notifications, markNotificationRead, resetAllData, branding } = useAttendance();
+  const { currentUser, logout, notifications, markNotificationRead, refreshData, branding } = useAttendance();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -105,18 +105,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <HelpCircle className="w-4 h-4" />
         </button>
 
-        {/* Reset Data quick button */}
+        {/* Refresh Data quick button */}
         <button
           onClick={() => {
-            if (confirm('Reset demo data to initial factory state?')) {
-              resetAllData();
-            }
+            refreshData();
           }}
-          className="hidden md:flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-          title="Restore sample attendance records"
+          className="hidden md:flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+          title="Refresh database records"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Reset Data</span>
+          <span>Refresh</span>
         </button>
 
         {/* Notifications Icon with popover */}
@@ -285,11 +283,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Administrators can approve manual punch adjustments with audit justification.
                 </p>
               </div>
-              <div className="p-3 bg-emerald-50 rounded-xl text-emerald-900">
-                <p className="font-semibold">Demo Credentials</p>
+              <div className="p-3 bg-slate-50 rounded-xl text-slate-700">
+                <p className="font-semibold text-slate-900">Account Access</p>
                 <p className="mt-1">
-                  <strong>Admin:</strong> ADMIN001 / admin123<br />
-                  <strong>Staff:</strong> EMP001, EMP002, EMP003 / staff123
+                  Staff accounts are issued directly by HR Administration upon employee onboarding. Contact your system administrator if you require credential assistance.
                 </p>
               </div>
             </div>

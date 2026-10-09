@@ -34,7 +34,7 @@ export interface Shift {
 }
 
 export interface Employee {
-  id: string; // EMP001
+  id: string; // Unique Employee ID
   name: string;
   email: string;
   phone: string;

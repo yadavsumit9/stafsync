@@ -32,10 +32,12 @@ export const AttendanceManagement: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [showManualAddModal, setShowManualAddModal] = useState(false);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+
   // Manual Add Form State
   const [manualForm, setManualForm] = useState({
-    employeeId: employees[0]?.id || 'EMP001',
-    date: '2026-10-07',
+    employeeId: employees[0]?.id || '',
+    date: todayStr,
     punchIn: '09:30 AM',
     punchOut: '06:30 PM',
     status: 'PRESENT' as AttendanceStatus,
@@ -47,9 +49,14 @@ export const AttendanceManagement: React.FC = () => {
 
   // Filter Attendance
   const filteredAttendance = attendance.filter((rec) => {
-    if (dateRange === 'today' && rec.date !== '2026-10-07') return false;
-    if (dateRange === 'week' && rec.date < '2026-10-01') return false;
-    if (dateRange === 'month' && !rec.date.startsWith('2026-10')) return false;
+    if (dateRange === 'today' && rec.date !== todayStr) return false;
+    if (dateRange === 'week') {
+      const recDate = new Date(rec.date);
+      const now = new Date();
+      const diffDays = (now.getTime() - recDate.getTime()) / (1000 * 3600 * 24);
+      if (diffDays > 7 || diffDays < 0) return false;
+    }
+    if (dateRange === 'month' && !rec.date.startsWith(todayStr.slice(0, 7))) return false;
 
     const matchesSearch =
       rec.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -410,12 +417,17 @@ export const AttendanceManagement: React.FC = () => {
                   value={manualForm.employeeId}
                   onChange={(e) => setManualForm({ ...manualForm, employeeId: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                  disabled={employees.length === 0}
                 >
-                  {employees.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} ({e.id}) - {e.department}
-                    </option>
-                  ))}
+                  {employees.length === 0 ? (
+                    <option value="">No employees registered yet</option>
+                  ) : (
+                    employees.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name} ({e.id}) - {e.department}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

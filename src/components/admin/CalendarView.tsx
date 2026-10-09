@@ -16,15 +16,18 @@ export const CalendarView: React.FC = () => {
   const { employees, attendance, holidays, currentUser } = useAttendance();
   const isAdmin = currentUser?.role === 'admin';
 
+  const now = new Date();
+  const todayDateStr = now.toISOString().slice(0, 10);
+
   // If staff, lock to current staff's ID
   const [selectedEmpId, setSelectedEmpId] = useState<string>(
     currentUser?.role === 'staff' && currentUser?.employeeId
       ? currentUser.employeeId
-      : employees[0]?.id || 'EMP001'
+      : employees[0]?.id || ''
   );
 
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(9); // 0-indexed: 9 = October
+  const [currentYear, setCurrentYear] = useState(now.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
 
   const selectedEmployee = employees.find((e) => e.id === selectedEmpId) || employees[0];
@@ -76,13 +79,18 @@ export const CalendarView: React.FC = () => {
             <select
               value={selectedEmpId}
               onChange={(e) => setSelectedEmpId(e.target.value)}
-              className="bg-white text-xs font-medium text-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-xs outline-none cursor-pointer"
+              disabled={employees.length === 0}
+              className="bg-white text-xs font-medium text-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/90 shadow-xs outline-none cursor-pointer disabled:opacity-60"
             >
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name} ({emp.id}) · {emp.department}
-                </option>
-              ))}
+              {employees.length === 0 ? (
+                <option value="">No employees registered</option>
+              ) : (
+                employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.id}) · {emp.department}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         )}
@@ -173,7 +181,7 @@ export const CalendarView: React.FC = () => {
               (r) => r.employeeId === selectedEmployee?.id && r.date === dateStr
             );
             const holiday = holidays.find((h) => h.date === dateStr);
-            const isToday = dateStr === '2026-10-07';
+            const isToday = dateStr === todayDateStr;
 
             let statusColor = 'bg-slate-50 text-slate-700 hover:bg-slate-100/80';
             let dotColor = '';
