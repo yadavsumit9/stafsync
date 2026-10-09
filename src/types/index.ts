@@ -63,6 +63,10 @@ export interface Employee {
   joiningDate: string;
   employmentType: 'Full Time' | 'Part Time' | 'Contract' | 'Intern';
   shiftId: string;
+  customTiming?: boolean; // When true, employee has personalized manual work schedule
+  shiftStartTime?: string; // e.g. "09:30"
+  shiftEndTime?: string; // e.g. "18:30"
+  gracePeriodMinutes?: number; // e.g. 15
   defaultWorkMode: WorkMode;
   allowFlexibleWorkMode?: boolean; // When true, staff can choose Office, WFH, or Hybrid on Punch-In
   weeklyOffDays: string[]; // ['Sunday', 'Saturday']

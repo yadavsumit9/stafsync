@@ -162,6 +162,10 @@ class ProductionDatabase {
         allow_flexible_work_mode INTEGER DEFAULT 0,
         weekly_off_days TEXT NOT NULL,
         status TEXT NOT NULL,
+        custom_timing INTEGER DEFAULT 0,
+        shift_start_time TEXT,
+        shift_end_time TEXT,
+        grace_period_minutes INTEGER DEFAULT 15,
         created_at TEXT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
@@ -375,6 +379,10 @@ class ProductionDatabase {
         ['allow_flexible_work_mode', 'INTEGER DEFAULT 0'],
         ['weekly_off_days', "TEXT DEFAULT 'Sunday,Saturday'"],
         ['default_work_mode', "TEXT DEFAULT 'OFFICE'"],
+        ['custom_timing', 'INTEGER DEFAULT 0'],
+        ['shift_start_time', 'TEXT'],
+        ['shift_end_time', 'TEXT'],
+        ['grace_period_minutes', 'INTEGER DEFAULT 15'],
       ];
 
       for (const [colName, colDef] of empColDefs) {
@@ -971,14 +979,47 @@ class ProductionDatabase {
         [userId, empId, passwordHash, 'staff', 0, null, null, nowIso]
       );
 
+      // Determine assigned shift and custom timing
+      let assignedShiftId = emp.shiftId || 'SHIFT_GEN';
+      const isCustomTiming = Boolean(emp.customTiming || (emp.shiftStartTime && emp.shiftEndTime));
+
+      if (isCustomTiming && emp.shiftStartTime && emp.shiftEndTime) {
+        assignedShiftId = `SHIFT_CUSTOM_${empId}`;
+        const shiftName = `${emp.name.trim()} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`;
+        this.db.run(
+          `INSERT OR REPLACE INTO shifts (
+             id, name, start_time, end_time, grace_period_minutes, min_working_hours, max_working_hours,
+             description, break_duration_minutes, half_day_threshold_hours, full_day_threshold_hours,
+             allow_early_punch_in, max_early_punch_in_minutes, enable_overtime, working_days
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            assignedShiftId,
+            shiftName,
+            emp.shiftStartTime,
+            emp.shiftEndTime,
+            emp.gracePeriodMinutes ?? 15,
+            8,
+            12,
+            `Manual staff schedule for ${emp.name.trim()}`,
+            60,
+            4,
+            8,
+            1,
+            60,
+            1,
+            'Monday,Tuesday,Wednesday,Thursday,Friday',
+          ]
+        );
+      }
+
       // 2. Insert Employee record linked to User
       this.db.run(
         `INSERT INTO employees (
            id, user_id, name, email, phone, gender, dob, address, emergency_contact,
            department, position, designation, joining_date, employment_type,
            shift_id, default_work_mode, allow_flexible_work_mode, weekly_off_days,
-           status, created_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           status, created_at, custom_timing, shift_start_time, shift_end_time, grace_period_minutes
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empId,
           userId,
@@ -994,12 +1035,16 @@ class ProductionDatabase {
           emp.designation || 'Associate',
           emp.joiningDate || new Date().toISOString().slice(0, 10),
           emp.employmentType || 'Full Time',
-          emp.shiftId || 'SHIFT_GEN',
+          assignedShiftId,
           emp.defaultWorkMode || 'OFFICE',
           emp.allowFlexibleWorkMode ? 1 : 0,
           JSON.stringify(emp.weeklyOffDays || ['Sunday', 'Saturday']),
           emp.status || 'Active',
           nowIso,
+          isCustomTiming ? 1 : 0,
+          emp.shiftStartTime || null,
+          emp.shiftEndTime || null,
+          emp.gracePeriodMinutes ?? 15,
         ]
       );
 
@@ -1104,6 +1149,10 @@ class ProductionDatabase {
         joiningDate: item.joining_date,
         employmentType: item.employment_type,
         shiftId: item.shift_id,
+        customTiming: Boolean(item.custom_timing),
+        shiftStartTime: item.shift_start_time || undefined,
+        shiftEndTime: item.shift_end_time || undefined,
+        gracePeriodMinutes: item.grace_period_minutes !== undefined && item.grace_period_minutes !== null ? Number(item.grace_period_minutes) : 15,
         defaultWorkMode: item.default_work_mode,
         allowFlexibleWorkMode: Boolean(item.allow_flexible_work_mode),
         weeklyOffDays: offs,
@@ -1122,12 +1171,47 @@ class ProductionDatabase {
 
     const merged = { ...existing, ...updates };
 
+    let assignedShiftId = merged.shiftId;
+    const isCustomTiming = Boolean(merged.customTiming || (merged.shiftStartTime && merged.shiftEndTime));
+
+    if (isCustomTiming && merged.shiftStartTime && merged.shiftEndTime) {
+      if (!assignedShiftId || !assignedShiftId.startsWith('SHIFT_CUSTOM_')) {
+        assignedShiftId = `SHIFT_CUSTOM_${cleanId}`;
+      }
+      const shiftName = `${merged.name.trim()} Timing (${merged.shiftStartTime} - ${merged.shiftEndTime})`;
+      this.db.run(
+        `INSERT OR REPLACE INTO shifts (
+           id, name, start_time, end_time, grace_period_minutes, min_working_hours, max_working_hours,
+           description, break_duration_minutes, half_day_threshold_hours, full_day_threshold_hours,
+           allow_early_punch_in, max_early_punch_in_minutes, enable_overtime, working_days
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          assignedShiftId,
+          shiftName,
+          merged.shiftStartTime,
+          merged.shiftEndTime,
+          merged.gracePeriodMinutes ?? 15,
+          8,
+          12,
+          `Manual staff schedule for ${merged.name.trim()}`,
+          60,
+          4,
+          8,
+          1,
+          60,
+          1,
+          'Monday,Tuesday,Wednesday,Thursday,Friday',
+        ]
+      );
+    }
+
     this.db.run(
       `UPDATE employees SET
          name = ?, email = ?, phone = ?, gender = ?, dob = ?, address = ?,
          emergency_contact = ?, department = ?, position = ?, designation = ?,
          joining_date = ?, employment_type = ?, shift_id = ?, default_work_mode = ?,
-         allow_flexible_work_mode = ?, weekly_off_days = ?, status = ?
+         allow_flexible_work_mode = ?, weekly_off_days = ?, status = ?,
+         custom_timing = ?, shift_start_time = ?, shift_end_time = ?, grace_period_minutes = ?
        WHERE UPPER(id) = UPPER(?)`,
       [
         merged.name,
@@ -1142,11 +1226,15 @@ class ProductionDatabase {
         merged.designation,
         merged.joiningDate,
         merged.employmentType,
-        merged.shiftId,
+        assignedShiftId,
         merged.defaultWorkMode,
         merged.allowFlexibleWorkMode ? 1 : 0,
         JSON.stringify(merged.weeklyOffDays),
         merged.status,
+        isCustomTiming ? 1 : 0,
+        merged.shiftStartTime || null,
+        merged.shiftEndTime || null,
+        merged.gracePeriodMinutes ?? 15,
         cleanId,
       ]
     );
@@ -1329,7 +1417,27 @@ class ProductionDatabase {
     }
 
     const shifts = this.getShifts();
-    const shift = shifts.find((s) => s.id === emp.shiftId) || shifts[0] || INITIAL_SHIFTS[0];
+    let shift = shifts.find((s) => s.id === emp.shiftId);
+    if (!shift && emp.shiftStartTime && emp.shiftEndTime) {
+      shift = {
+        id: emp.shiftId || `SHIFT_CUSTOM_${emp.id}`,
+        name: `${emp.name} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`,
+        startTime: emp.shiftStartTime,
+        endTime: emp.shiftEndTime,
+        gracePeriodMinutes: emp.gracePeriodMinutes ?? 15,
+        minWorkingHours: 8,
+        maxWorkingHours: 12,
+        breakDurationMinutes: 60,
+        halfDayThresholdHours: 4,
+        fullDayThresholdHours: 8,
+        allowEarlyPunchIn: true,
+        maxEarlyPunchInMinutes: 60,
+        enableOvertime: true,
+        workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      };
+    } else if (!shift) {
+      shift = shifts[0] || INITIAL_SHIFTS[0];
+    }
     const punchSettings = this.getPunchSettings();
 
     // Server-side authoritative evaluation of Punch-In
@@ -1433,7 +1541,27 @@ class ProductionDatabase {
     }
 
     const shifts = this.getShifts();
-    const shift = shifts.find((s) => s.id === existing.shiftId) || shifts[0] || INITIAL_SHIFTS[0];
+    let shift = shifts.find((s) => s.id === existing.shiftId);
+    if (!shift && emp?.shiftStartTime && emp?.shiftEndTime) {
+      shift = {
+        id: existing.shiftId || `SHIFT_CUSTOM_${emp.id}`,
+        name: `${emp.name} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`,
+        startTime: emp.shiftStartTime,
+        endTime: emp.shiftEndTime,
+        gracePeriodMinutes: emp.gracePeriodMinutes ?? 15,
+        minWorkingHours: 8,
+        maxWorkingHours: 12,
+        breakDurationMinutes: 60,
+        halfDayThresholdHours: 4,
+        fullDayThresholdHours: 8,
+        allowEarlyPunchIn: true,
+        maxEarlyPunchInMinutes: 60,
+        enableOvertime: true,
+        workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      };
+    } else if (!shift) {
+      shift = shifts[0] || INITIAL_SHIFTS[0];
+    }
     const punchSettings = this.getPunchSettings();
 
     // Server-side calculation of worked hours, break, attendance status, overtime

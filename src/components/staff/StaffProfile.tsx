@@ -147,7 +147,11 @@ export const StaffProfile: React.FC = () => {
               <div className="p-3 bg-slate-50 rounded-xl">
                 <span className="text-slate-400 block mb-0.5">Assigned Shift</span>
                 <span className="font-bold text-slate-900">
-                  {assignedShift ? `${assignedShift.name} (${assignedShift.startTime} - ${assignedShift.endTime})` : 'General Shift'}
+                  {currentEmp?.shiftStartTime && currentEmp?.shiftEndTime
+                    ? `Manual Timing (${currentEmp.shiftStartTime} - ${currentEmp.shiftEndTime})`
+                    : assignedShift
+                    ? `${assignedShift.name} (${assignedShift.startTime} - ${assignedShift.endTime})`
+                    : 'General Shift'}
                 </span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl">

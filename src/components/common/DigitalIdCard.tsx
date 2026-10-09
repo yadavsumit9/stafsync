@@ -102,7 +102,11 @@ export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, o
         <div>
           <span className="text-[10px] text-emerald-400/80 uppercase font-medium block">Shift Timing</span>
           <span className="font-semibold text-white">
-            {shift ? `${shift.startTime} - ${shift.endTime}` : '09:30 AM - 06:30 PM'}
+            {employee.shiftStartTime && employee.shiftEndTime
+              ? `${employee.shiftStartTime} - ${employee.shiftEndTime}`
+              : shift
+              ? `${shift.startTime} - ${shift.endTime}`
+              : '09:30 AM - 06:30 PM'}
           </span>
         </div>
         <div>

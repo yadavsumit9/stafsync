@@ -22,10 +22,39 @@ import {
   AlertCircle,
   Sparkles,
   Lock,
+  Clock,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
 import { Employee, WorkMode } from '../../types';
 import { DigitalIdCard } from '../common/DigitalIdCard';
+
+function formatTimeTo12(timeStr?: string): string {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  let h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const mStr = m < 10 ? '0' + m : m;
+  const hStr = h < 10 ? '0' + h : h;
+  return `${hStr}:${mStr} ${ampm}`;
+}
+
+function calculateShiftDuration(start?: string, end?: string): string {
+  if (!start || !end) return '';
+  const [sh, sm] = start.split(':').map((x) => parseInt(x, 10));
+  const [eh, em] = end.split(':').map((x) => parseInt(x, 10));
+  if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) return '';
+  let startMins = sh * 60 + sm;
+  let endMins = eh * 60 + em;
+  if (endMins < startMins) endMins += 24 * 60; // Overnight shift
+  const diff = endMins - startMins;
+  const h = Math.floor(diff / 60);
+  const m = diff % 60;
+  return `${h}h ${m > 0 ? `${m}m ` : ''}shift`;
+}
 
 export const EmployeeManagement: React.FC = () => {
   const {
@@ -45,6 +74,7 @@ export const EmployeeManagement: React.FC = () => {
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editTimingMode, setEditTimingMode] = useState<'manual' | 'preset'>('manual');
   const [viewingEmployee, setViewingEmployee] = useState<Employee | null>(null);
   const [resetPassEmp, setResetPassEmp] = useState<Employee | null>(null);
   const [newPassword, setNewPassword] = useState('');
@@ -62,9 +92,13 @@ export const EmployeeManagement: React.FC = () => {
     department: 'Engineering',
     position: 'Software Engineer',
     designation: 'Developer',
-    joiningDate: '2026-10-01',
+    joiningDate: new Date().toISOString().slice(0, 10),
     employmentType: 'Full Time' as 'Full Time' | 'Part Time' | 'Contract' | 'Intern',
     shiftId: 'SHIFT_GEN',
+    timingMode: 'manual' as 'manual' | 'preset', // Default to manual timing for individual schedules
+    shiftStartTime: '09:30',
+    shiftEndTime: '18:30',
+    gracePeriodMinutes: 15,
     defaultWorkMode: 'OFFICE' as WorkMode,
     allowFlexibleWorkMode: false,
     weeklyOffDays: ['Sunday', 'Saturday'],
@@ -106,6 +140,13 @@ export const EmployeeManagement: React.FC = () => {
       return;
     }
 
+    const isManual = formData.timingMode === 'manual';
+
+    if (isManual && (!formData.shiftStartTime || !formData.shiftEndTime)) {
+      setFormError('Please provide both Shift Start Time and End Time.');
+      return;
+    }
+
     const res = addEmployee(
       {
         name: formData.name,
@@ -120,7 +161,11 @@ export const EmployeeManagement: React.FC = () => {
         designation: formData.designation,
         joiningDate: formData.joiningDate,
         employmentType: formData.employmentType,
-        shiftId: formData.shiftId,
+        shiftId: isManual ? '' : formData.shiftId,
+        customTiming: isManual,
+        shiftStartTime: isManual ? formData.shiftStartTime : undefined,
+        shiftEndTime: isManual ? formData.shiftEndTime : undefined,
+        gracePeriodMinutes: isManual ? Number(formData.gracePeriodMinutes) || 15 : undefined,
         defaultWorkMode: formData.defaultWorkMode,
         allowFlexibleWorkMode: formData.allowFlexibleWorkMode,
         weeklyOffDays: formData.weeklyOffDays,
@@ -149,6 +194,10 @@ export const EmployeeManagement: React.FC = () => {
         joiningDate: new Date().toISOString().slice(0, 10),
         employmentType: 'Full Time',
         shiftId: 'SHIFT_GEN',
+        timingMode: 'manual',
+        shiftStartTime: '09:30',
+        shiftEndTime: '18:30',
+        gracePeriodMinutes: 15,
         defaultWorkMode: 'OFFICE',
         allowFlexibleWorkMode: false,
         weeklyOffDays: ['Sunday', 'Saturday'],
@@ -165,7 +214,21 @@ export const EmployeeManagement: React.FC = () => {
     e.preventDefault();
     if (!editingEmployee) return;
 
-    const res = updateEmployee(editingEmployee.id, editingEmployee);
+    const isManual = editTimingMode === 'manual';
+    const payload: Partial<Employee> = {
+      ...editingEmployee,
+      customTiming: isManual,
+      shiftStartTime: isManual ? (editingEmployee.shiftStartTime || '09:30') : undefined,
+      shiftEndTime: isManual ? (editingEmployee.shiftEndTime || '18:30') : undefined,
+      gracePeriodMinutes: isManual ? (Number(editingEmployee.gracePeriodMinutes) || 15) : undefined,
+      shiftId: isManual
+        ? (editingEmployee.shiftId && editingEmployee.shiftId.startsWith('SHIFT_CUSTOM_')
+            ? editingEmployee.shiftId
+            : `SHIFT_CUSTOM_${editingEmployee.id}`)
+        : editingEmployee.shiftId,
+    };
+
+    const res = updateEmployee(editingEmployee.id, payload);
     if (res.success) {
       setSuccessToast(`Employee profile updated successfully.`);
       setTimeout(() => setSuccessToast(''), 4000);
@@ -331,8 +394,27 @@ export const EmployeeManagement: React.FC = () => {
                         <span className="text-slate-700 block">{emp.email}</span>
                         <span className="text-[11px] text-slate-400">{emp.phone}</span>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        {shift ? shift.name : 'General Shift'}
+                      <td className="py-3.5 px-4">
+                        {emp.customTiming || emp.shiftStartTime ? (
+                          <div>
+                            <span className="font-semibold text-slate-900 flex items-center gap-1.5 text-xs">
+                              <Clock className="w-3 h-3 text-[#087A4B] shrink-0" />
+                              {formatTimeTo12(emp.shiftStartTime)} - {formatTimeTo12(emp.shiftEndTime)}
+                            </span>
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
+                              Manual Timing
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="font-medium text-slate-900 block text-xs">
+                              {shift ? shift.name : 'General Shift'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {shift ? `${formatTimeTo12(shift.startTime)} - ${formatTimeTo12(shift.endTime)}` : '09:00 AM - 06:00 PM'}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <div>
@@ -397,7 +479,16 @@ export const EmployeeManagement: React.FC = () => {
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => setEditingEmployee(emp)}
+                            onClick={() => {
+                              const empShift = shifts.find((s) => s.id === emp.shiftId);
+                              setEditingEmployee({
+                                ...emp,
+                                shiftStartTime: emp.shiftStartTime || (empShift ? empShift.startTime : '09:30'),
+                                shiftEndTime: emp.shiftEndTime || (empShift ? empShift.endTime : '18:30'),
+                                gracePeriodMinutes: emp.gracePeriodMinutes || (empShift ? empShift.gracePeriodMinutes : 15),
+                              });
+                              setEditTimingMode(emp.customTiming || emp.shiftStartTime ? 'manual' : 'preset');
+                            }}
                             className="p-1.5 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Edit Profile"
                           >
@@ -646,19 +737,119 @@ export const EmployeeManagement: React.FC = () => {
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
                     />
                   </div>
-                  <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Assigned Shift</label>
-                    <select
-                      value={formData.shiftId}
-                      onChange={(e) => setFormData({ ...formData, shiftId: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                    >
-                      {shifts.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} ({s.startTime} - {s.endTime})
-                        </option>
-                      ))}
-                    </select>
+                  <div className="sm:col-span-2 p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <label className="font-bold text-slate-900 block text-xs flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#087A4B]" />
+                          Staff Work Timing & Schedule
+                        </label>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Each staff member can have different manual timing or use a standard shift preset.
+                        </p>
+                      </div>
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-2xs self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, timingMode: 'manual' })}
+                          className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                            formData.timingMode === 'manual'
+                              ? 'bg-[#087A4B] text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Manual Timing (Custom)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, timingMode: 'preset' })}
+                          className={`px-3 py-1 text-[11px] font-semibold rounded-lg transition-all cursor-pointer ${
+                            formData.timingMode === 'preset'
+                              ? 'bg-[#087A4B] text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Shift Preset
+                        </button>
+                      </div>
+                    </div>
+
+                    {formData.timingMode === 'manual' ? (
+                      <div className="space-y-2.5 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="font-semibold text-slate-700 block mb-1">
+                              Shift Start Time (Punch-In) *
+                            </label>
+                            <input
+                              type="time"
+                              value={formData.shiftStartTime}
+                              onChange={(e) => setFormData({ ...formData, shiftStartTime: e.target.value })}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#087A4B] font-medium"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="font-semibold text-slate-700 block mb-1">
+                              Shift End Time (Punch-Out) *
+                            </label>
+                            <input
+                              type="time"
+                              value={formData.shiftEndTime}
+                              onChange={(e) => setFormData({ ...formData, shiftEndTime: e.target.value })}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#087A4B] font-medium"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="font-semibold text-slate-700 block mb-1">
+                              Grace Period (Minutes)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="60"
+                              value={formData.gracePeriodMinutes}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  gracePeriodMinutes: parseInt(e.target.value, 10) || 0,
+                                })
+                              }
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#087A4B] font-medium"
+                              placeholder="15"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="px-3 py-2 bg-emerald-50 border border-emerald-200/70 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-emerald-900">
+                          <span className="font-medium flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#087A4B] shrink-0" />
+                            Individual Staff Timing: <strong>{formatTimeTo12(formData.shiftStartTime)}</strong> to <strong>{formatTimeTo12(formData.shiftEndTime)}</strong>
+                          </span>
+                          <span className="text-emerald-700 font-medium">
+                            {calculateShiftDuration(formData.shiftStartTime, formData.shiftEndTime)} • Grace: {formData.gracePeriodMinutes}m
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-1">
+                        <label className="font-semibold text-slate-700 block mb-1">
+                          Select Company Shift Preset
+                        </label>
+                        <select
+                          value={formData.shiftId}
+                          onChange={(e) => setFormData({ ...formData, shiftId: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-[#087A4B]"
+                        >
+                          {shifts.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} ({formatTimeTo12(s.startTime)} - {formatTimeTo12(s.endTime)})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="font-semibold text-slate-700 block mb-1">Default Work Mode</label>
@@ -817,34 +1008,132 @@ export const EmployeeManagement: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Position</label>
-                  <input
-                    type="text"
-                    value={editingEmployee.position}
-                    onChange={(e) =>
-                      setEditingEmployee({ ...editingEmployee, position: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                  />
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Position</label>
+                <input
+                  type="text"
+                  value={editingEmployee.position}
+                  onChange={(e) =>
+                    setEditingEmployee({ ...editingEmployee, position: e.target.value })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                />
+              </div>
+
+              {/* Staff Work Timing & Schedule in Edit Modal */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-900 block text-xs flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#087A4B]" />
+                    Staff Work Timing & Schedule
+                  </label>
+                  <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setEditTimingMode('manual')}
+                      className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all cursor-pointer ${
+                        editTimingMode === 'manual'
+                          ? 'bg-[#087A4B] text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Manual Timing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditTimingMode('preset')}
+                      className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all cursor-pointer ${
+                        editTimingMode === 'preset'
+                          ? 'bg-[#087A4B] text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Shift Preset
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Assigned Shift</label>
-                  <select
-                    value={editingEmployee.shiftId}
-                    onChange={(e) =>
-                      setEditingEmployee({ ...editingEmployee, shiftId: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none"
-                  >
-                    {shifts.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+
+                {editTimingMode === 'manual' ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="font-medium text-slate-600 block text-[10px] mb-1">
+                          Start Time *
+                        </label>
+                        <input
+                          type="time"
+                          value={editingEmployee.shiftStartTime || '09:30'}
+                          onChange={(e) =>
+                            setEditingEmployee({
+                              ...editingEmployee,
+                              shiftStartTime: e.target.value,
+                            })
+                          }
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-[#087A4B] text-xs"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="font-medium text-slate-600 block text-[10px] mb-1">
+                          End Time *
+                        </label>
+                        <input
+                          type="time"
+                          value={editingEmployee.shiftEndTime || '18:30'}
+                          onChange={(e) =>
+                            setEditingEmployee({
+                              ...editingEmployee,
+                              shiftEndTime: e.target.value,
+                            })
+                          }
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-[#087A4B] text-xs"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="font-medium text-slate-600 block text-[10px] mb-1">
+                          Grace (Mins)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="60"
+                          value={editingEmployee.gracePeriodMinutes ?? 15}
+                          onChange={(e) =>
+                            setEditingEmployee({
+                              ...editingEmployee,
+                              gracePeriodMinutes: parseInt(e.target.value, 10) || 0,
+                            })
+                          }
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-[#087A4B] text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="px-2.5 py-1 bg-emerald-50 rounded-lg text-[10px] text-emerald-800 font-medium flex items-center justify-between">
+                      <span>Schedule: {formatTimeTo12(editingEmployee.shiftStartTime || '09:30')} - {formatTimeTo12(editingEmployee.shiftEndTime || '18:30')}</span>
+                      <span>{calculateShiftDuration(editingEmployee.shiftStartTime || '09:30', editingEmployee.shiftEndTime || '18:30')}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="font-medium text-slate-600 block text-[10px] mb-1">
+                      Assigned Shift Preset
+                    </label>
+                    <select
+                      value={editingEmployee.shiftId}
+                      onChange={(e) =>
+                        setEditingEmployee({ ...editingEmployee, shiftId: e.target.value })
+                      }
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-[#087A4B] text-xs"
+                    >
+                      {shifts.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({formatTimeTo12(s.startTime)} - {formatTimeTo12(s.endTime)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

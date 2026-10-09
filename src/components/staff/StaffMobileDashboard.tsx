@@ -57,8 +57,17 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
 
   const assignedShift =
     shifts.find((s) => s.id === currentEmp?.shiftId) ||
-    shifts[0] ||
-    null;
+    (currentEmp?.shiftStartTime && currentEmp?.shiftEndTime
+      ? {
+          id: currentEmp.shiftId || `SHIFT_CUSTOM_${currentEmp.id}`,
+          name: `${currentEmp.name} Timing (${currentEmp.shiftStartTime} - ${currentEmp.shiftEndTime})`,
+          startTime: currentEmp.shiftStartTime,
+          endTime: currentEmp.shiftEndTime,
+          gracePeriodMinutes: currentEmp.gracePeriodMinutes ?? 15,
+          minWorkingHours: 8,
+          maxWorkingHours: 12,
+        }
+      : shifts[0] || null);
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const formattedToday = now.toLocaleDateString('en-US', {
