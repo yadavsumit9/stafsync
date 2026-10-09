@@ -29,6 +29,24 @@ import {
   clearCachedBranding,
   getCachedBranding,
 } from '../utils/brandingSecurity';
+import { isSupabaseConfigured, checkDatabaseConnection } from './supabaseClient';
+import {
+  fetchAllFromSupabase,
+  pushUserToSupabase,
+  deleteUserFromSupabase,
+  pushEmployeeToSupabase,
+  deleteEmployeeFromSupabase,
+  pushAttendanceToSupabase,
+  pushShiftToSupabase,
+  deleteShiftFromSupabase,
+  pushLeaveToSupabase,
+  pushHolidayToSupabase,
+  deleteHolidayFromSupabase,
+  pushSettingToSupabase,
+  pushAuditLogToSupabase,
+  pushNotificationToSupabase,
+  subscribeToDatabaseChanges,
+} from './supabaseSync';
 
 export interface AdminSecurityProfile {
   adminId: string;
@@ -109,6 +127,18 @@ class ProductionDatabase {
           this.seedProductionBaseline();
           this.persist();
         }
+
+        // Authoritative production cloud database sync
+        if (isSupabaseConfigured()) {
+          try {
+            await this.syncWithRemoteDatabase();
+            subscribeToDatabaseChanges(() => {
+              this.syncWithRemoteDatabase();
+            });
+          } catch (cloudErr) {
+            console.warn('Initial cloud database sync warning:', cloudErr);
+          }
+        }
       } catch (err) {
         console.error('Failed to initialize sql.js database with wasm url:', err);
         try {
@@ -118,6 +148,9 @@ class ProductionDatabase {
           this.db = new SQL.Database();
           this.createTables();
           this.seedProductionBaseline();
+          if (isSupabaseConfigured()) {
+            await this.syncWithRemoteDatabase();
+          }
         } catch (innerErr) {
           console.error('Failed to initialize sql.js fallback:', innerErr);
         }
@@ -522,6 +555,310 @@ class ProductionDatabase {
       }
     } catch (e) {
       console.error('Failed to persist SQLite database:', e);
+    }
+  }
+
+  // ==========================================
+  // CLOUD DATABASE PERSISTENCE & SYNCHRONIZATION
+  // ==========================================
+
+  public isCloudConnected(): boolean {
+    return isSupabaseConfigured();
+  }
+
+  public async syncWithRemoteDatabase(): Promise<boolean> {
+    if (!this.db || !isSupabaseConfigured()) return false;
+
+    try {
+      const remote = await fetchAllFromSupabase();
+      if (!remote) return false;
+
+      // 1. Sync users
+      if (remote.users && remote.users.length > 0) {
+        for (const u of remote.users) {
+          this.db.run(
+            `INSERT OR REPLACE INTO users (id, username, password_hash, role, must_change_password, last_login, password_last_changed, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [u.id, u.username, u.password_hash, u.role, u.must_change_password || 0, u.last_login, u.password_last_changed, u.created_at]
+          );
+        }
+      }
+
+      // 2. Sync shifts
+      if (remote.shifts && remote.shifts.length > 0) {
+        for (const s of remote.shifts) {
+          this.db.run(
+            `INSERT OR REPLACE INTO shifts (
+               id, name, start_time, end_time, grace_period_minutes, min_working_hours, max_working_hours,
+               description, break_duration_minutes, half_day_threshold_hours, full_day_threshold_hours,
+               allow_early_punch_in, max_early_punch_in_minutes, enable_overtime, working_days
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              s.id,
+              s.name,
+              s.startTime,
+              s.endTime,
+              s.gracePeriodMinutes,
+              s.minWorkingHours,
+              s.maxWorkingHours,
+              s.description || '',
+              s.breakDurationMinutes ?? 60,
+              s.halfDayThresholdHours ?? 4,
+              s.fullDayThresholdHours ?? 8,
+              s.allowEarlyPunchIn !== false ? 1 : 0,
+              s.maxEarlyPunchInMinutes ?? 60,
+              s.enableOvertime !== false ? 1 : 0,
+              Array.isArray(s.workingDays) ? s.workingDays.join(',') : 'Monday,Tuesday,Wednesday,Thursday,Friday',
+            ]
+          );
+        }
+      }
+
+      // 3. Sync employees
+      if (remote.employees && remote.employees.length > 0) {
+        for (const emp of remote.employees) {
+          const userStmt = this.db.prepare('SELECT user_id FROM employees WHERE id = ?');
+          userStmt.bind([emp.id]);
+          let existingUserId = `USR_${emp.id}`;
+          if (userStmt.step()) {
+            const row = userStmt.getAsObject() as any;
+            if (row && row.user_id) existingUserId = row.user_id;
+          }
+          userStmt.free();
+
+          this.db.run(
+            `INSERT OR REPLACE INTO employees (
+               id, user_id, name, email, phone, gender, dob, address, emergency_contact,
+               department, position, designation, joining_date, employment_type,
+               shift_id, default_work_mode, allow_flexible_work_mode, weekly_off_days,
+               status, custom_timing, shift_start_time, shift_end_time, grace_period_minutes, created_at
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              emp.id,
+              existingUserId,
+              emp.name,
+              emp.email,
+              emp.phone,
+              emp.gender || 'Male',
+              emp.dob || '1995-01-01',
+              emp.address || '',
+              emp.emergencyContact || '',
+              emp.department,
+              emp.position,
+              emp.designation,
+              emp.joiningDate,
+              emp.employmentType || 'Full Time',
+              emp.shiftId || 'SHIFT_GEN',
+              emp.defaultWorkMode || 'OFFICE',
+              emp.allowFlexibleWorkMode ? 1 : 0,
+              JSON.stringify(emp.weeklyOffDays || ['Sunday', 'Saturday']),
+              emp.status || 'Active',
+              emp.customTiming ? 1 : 0,
+              emp.shiftStartTime || null,
+              emp.shiftEndTime || null,
+              emp.gracePeriodMinutes ?? 15,
+              new Date().toISOString(),
+            ]
+          );
+        }
+      }
+
+      // 4. Sync attendance
+      if (remote.attendance && remote.attendance.length > 0) {
+        for (const att of remote.attendance) {
+          this.db.run(
+            `INSERT OR REPLACE INTO attendance (
+               id, organization_id, employee_id, employee_name, department, date,
+               shift_id, shift_name, punch_in, punch_out, punch_in_at, punch_out_at,
+               punch_in_status, punch_out_status, early_minutes, late_minutes,
+               grace_adjusted_late_minutes, status, attendance_value, work_mode,
+               working_hours_minutes, break_minutes, late_duration_minutes, overtime_minutes,
+               shift_start_at, shift_end_at, half_day_threshold_minutes, full_day_threshold_minutes,
+               calculation_source, manual_adjustment_reason, remarks, modified_by, modified_at, modification_reason
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              att.id,
+              att.organizationId || 'ORG_DEFAULT',
+              att.employeeId,
+              att.employeeName,
+              att.department,
+              att.date,
+              att.shiftId,
+              att.shiftName,
+              att.punchIn,
+              att.punchOut,
+              att.punchInAt || null,
+              att.punchOutAt || null,
+              att.punchInStatus || null,
+              att.punchOutStatus || null,
+              att.earlyMinutes || 0,
+              att.lateMinutes || 0,
+              att.graceAdjustedLateMinutes || 0,
+              att.status,
+              att.attendanceValue || 0,
+              att.workMode || 'OFFICE',
+              att.workingHoursMinutes || 0,
+              att.breakMinutes || 0,
+              att.lateDurationMinutes || 0,
+              att.overtimeMinutes || 0,
+              att.shiftStartAt || null,
+              att.shiftEndAt || null,
+              att.halfDayThresholdMinutes || 240,
+              att.fullDayThresholdMinutes || 480,
+              att.calculationSource || 'SERVER_PUNCH',
+              att.manualAdjustmentReason || null,
+              att.remarks || '',
+              att.modifiedBy || null,
+              att.modifiedAt || null,
+              att.modificationReason || null,
+            ]
+          );
+        }
+      }
+
+      // 5. Sync leave requests
+      if (remote.leaves && remote.leaves.length > 0) {
+        for (const l of remote.leaves) {
+          this.db.run(
+            `INSERT OR REPLACE INTO leave_requests (
+               id, employee_id, employee_name, department, leave_type, start_date, end_date,
+               total_days, reason, status, applied_on, reviewed_by, reviewed_on, review_remarks
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              l.id,
+              l.employeeId,
+              l.employeeName,
+              l.department,
+              l.leaveType,
+              l.startDate,
+              l.endDate,
+              l.totalDays,
+              l.reason,
+              l.status,
+              l.appliedAt,
+              l.reviewedBy || null,
+              l.reviewedAt || null,
+              l.reviewRemarks || null,
+            ]
+          );
+        }
+      }
+
+      // 6. Sync holidays
+      if (remote.holidays && remote.holidays.length > 0) {
+        for (const h of remote.holidays) {
+          this.db.run(
+            `INSERT OR REPLACE INTO holidays (id, name, date, description, type)
+             VALUES (?, ?, ?, ?, ?)`,
+            [h.id, h.name, h.date, h.description || '', h.type || 'Public']
+          );
+        }
+      }
+
+      // 7. Sync settings
+      if (remote.settings && Object.keys(remote.settings).length > 0) {
+        for (const [key, value] of Object.entries(remote.settings)) {
+          this.db.run(
+            `INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)`,
+            [key, value]
+          );
+        }
+      }
+
+      this.persist();
+      return true;
+    } catch (err) {
+      console.error('Remote database sync error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Migrate all existing records stored in this browser into Supabase PostgreSQL.
+   */
+  public async pushAllLocalDataToSupabase(): Promise<{ success: boolean; message: string; count: number }> {
+    if (!isSupabaseConfigured()) {
+      return {
+        success: false,
+        message: 'Cannot migrate: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are not configured.',
+        count: 0,
+      };
+    }
+
+    try {
+      let count = 0;
+      const employees = this.getEmployees();
+      const shifts = this.getShifts();
+      const attendance = this.getAttendance();
+      const leaves = this.getLeaves();
+      const holidays = this.getHolidays();
+
+      // Push shifts
+      for (const s of shifts) {
+        await pushShiftToSupabase(s);
+        count++;
+      }
+
+      // Push employees and their linked user records
+      for (const emp of employees) {
+        const stmt = this.db?.prepare('SELECT user_id, password_hash, role FROM employees JOIN users ON users.id = employees.user_id WHERE employees.id = ?');
+        if (stmt) {
+          stmt.bind([emp.id]);
+          if (stmt.step()) {
+            const userRow = stmt.getAsObject() as any;
+            if (userRow) {
+              await pushUserToSupabase({
+                id: userRow.user_id,
+                username: emp.accountUsername || emp.id,
+                password_hash: userRow.password_hash || INITIAL_ADMIN_HASH,
+                role: userRow.role || 'staff',
+                must_change_password: 0,
+                created_at: new Date().toISOString(),
+              });
+            }
+          }
+          stmt.free();
+        }
+
+        await pushEmployeeToSupabase(emp, `USR_${emp.id}`);
+        count++;
+      }
+
+      // Push attendance
+      for (const a of attendance) {
+        await pushAttendanceToSupabase(a);
+        count++;
+      }
+
+      // Push leaves
+      for (const l of leaves) {
+        await pushLeaveToSupabase(l);
+        count++;
+      }
+
+      // Push holidays
+      for (const h of holidays) {
+        await pushHolidayToSupabase(h);
+        count++;
+      }
+
+      // Push settings
+      await pushSettingToSupabase('punch_settings', JSON.stringify(this.getPunchSettings()));
+      await pushSettingToSupabase('company_settings', JSON.stringify(this.getCompanySettings()));
+      await pushSettingToSupabase('branding_settings', JSON.stringify(this.getBranding()));
+      count += 3;
+
+      return {
+        success: true,
+        message: `Successfully migrated ${count} records to Supabase PostgreSQL!`,
+        count,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        message: `Migration failed: ${err.message || 'Unknown error'}`,
+        count: 0,
+      };
     }
   }
 
@@ -1058,6 +1395,51 @@ class ProductionDatabase {
       );
       this.persist();
 
+      if (isCustomTiming && emp.shiftStartTime && emp.shiftEndTime) {
+        pushShiftToSupabase({
+          id: assignedShiftId,
+          name: `${emp.name.trim()} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`,
+          startTime: emp.shiftStartTime,
+          endTime: emp.shiftEndTime,
+          gracePeriodMinutes: emp.gracePeriodMinutes ?? 15,
+          minWorkingHours: 8,
+          maxWorkingHours: 12,
+          breakDurationMinutes: 60,
+          halfDayThresholdHours: 4,
+          fullDayThresholdHours: 8,
+          allowEarlyPunchIn: true,
+          maxEarlyPunchInMinutes: 60,
+          enableOvertime: true,
+          workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          description: `Manual staff schedule for ${emp.name.trim()}`,
+        }).catch(() => {});
+      }
+      pushEmployeeToSupabase({
+        id: empId,
+        name: emp.name.trim(),
+        email: emp.email.trim(),
+        phone: emp.phone.trim(),
+        gender: emp.gender || 'Male',
+        dob: emp.dob || '1995-01-01',
+        address: emp.address || '',
+        emergencyContact: emp.emergencyContact || '',
+        department: emp.department || 'General',
+        position: emp.position || 'Staff',
+        designation: emp.designation || 'Staff Member',
+        joiningDate: emp.joiningDate || new Date().toISOString().slice(0, 10),
+        employmentType: emp.employmentType || 'Full Time',
+        shiftId: assignedShiftId,
+        defaultWorkMode: emp.defaultWorkMode || 'OFFICE',
+        allowFlexibleWorkMode: Boolean(emp.allowFlexibleWorkMode),
+        weeklyOffDays: emp.weeklyOffDays || ['Sunday', 'Saturday'],
+        status: emp.status || 'Active',
+        accountUsername: emp.accountUsername || emp.email.trim().split('@')[0],
+        customTiming: isCustomTiming,
+        shiftStartTime: emp.shiftStartTime,
+        shiftEndTime: emp.shiftEndTime,
+        gracePeriodMinutes: emp.gracePeriodMinutes ?? 15,
+      }, userId).catch(() => {});
+
       return { success: true, message: `Employee ${emp.name} created successfully!`, employeeId: empId };
     } catch (err: any) {
       try {
@@ -1241,6 +1623,28 @@ class ProductionDatabase {
 
     this.addAuditLog('EMPLOYEE_UPDATED', 'Administrator', 'ADMIN', `Updated profile records for ${merged.name} (${cleanId}).`);
     this.persist();
+
+    if (isCustomTiming && merged.shiftStartTime && merged.shiftEndTime) {
+      pushShiftToSupabase({
+        id: assignedShiftId,
+        name: `${merged.name.trim()} Timing (${merged.shiftStartTime} - ${merged.shiftEndTime})`,
+        startTime: merged.shiftStartTime,
+        endTime: merged.shiftEndTime,
+        gracePeriodMinutes: merged.gracePeriodMinutes ?? 15,
+        minWorkingHours: 8,
+        maxWorkingHours: 12,
+        breakDurationMinutes: 60,
+        halfDayThresholdHours: 4,
+        fullDayThresholdHours: 8,
+        allowEarlyPunchIn: true,
+        maxEarlyPunchInMinutes: 60,
+        enableOvertime: true,
+        workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        description: `Manual staff schedule for ${merged.name.trim()}`,
+      }).catch(() => {});
+    }
+    pushEmployeeToSupabase(merged, existing.id).catch(() => {});
+
     return { success: true, message: 'Employee updated successfully.' };
   }
 
@@ -1256,6 +1660,7 @@ class ProductionDatabase {
 
       this.addAuditLog('EMPLOYEE_DEACTIVATED', 'Administrator', 'ADMIN', `Employee ${cleanId} removed from database.`);
       this.persist();
+      deleteEmployeeFromSupabase(cleanId).catch(() => {});
       return { success: true, message: 'Employee removed successfully.' };
     } catch (e: any) {
       try {
@@ -1418,7 +1823,7 @@ class ProductionDatabase {
 
     const shifts = this.getShifts();
     let shift = shifts.find((s) => s.id === emp.shiftId);
-    if (!shift && emp.shiftStartTime && emp.shiftEndTime) {
+    if ((emp.customTiming || !shift) && emp.shiftStartTime && emp.shiftEndTime) {
       shift = {
         id: emp.shiftId || `SHIFT_CUSTOM_${emp.id}`,
         name: `${emp.name} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`,
@@ -1542,7 +1947,7 @@ class ProductionDatabase {
 
     const shifts = this.getShifts();
     let shift = shifts.find((s) => s.id === existing.shiftId);
-    if (!shift && emp?.shiftStartTime && emp?.shiftEndTime) {
+    if ((emp?.customTiming || !shift) && emp?.shiftStartTime && emp?.shiftEndTime) {
       shift = {
         id: existing.shiftId || `SHIFT_CUSTOM_${emp.id}`,
         name: `${emp.name} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`,

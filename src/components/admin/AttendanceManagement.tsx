@@ -140,14 +140,22 @@ export const AttendanceManagement: React.FC = () => {
     const emp = employees.find((e) => e.id === manualForm.employeeId);
     if (!emp) return;
 
+    const empShift = shifts.find((s) => s.id === emp.shiftId);
+    const resolvedShiftName =
+      emp.customTiming || (emp.shiftStartTime && emp.shiftEndTime)
+        ? `${emp.name} Timing (${emp.shiftStartTime} - ${emp.shiftEndTime})`
+        : empShift
+        ? empShift.name
+        : 'General Shift';
+
     const newRecord: AttendanceRecord = {
       id: `ATT_MAN_${Date.now()}`,
       employeeId: emp.id,
       employeeName: emp.name,
       department: emp.department,
       date: manualForm.date,
-      shiftId: emp.shiftId,
-      shiftName: 'General Shift',
+      shiftId: emp.shiftId || (empShift ? empShift.id : 'SHIFT_GEN'),
+      shiftName: resolvedShiftName,
       punchIn: manualForm.punchIn || null,
       punchOut: manualForm.punchOut || null,
       status: manualForm.status,

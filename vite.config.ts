@@ -1,11 +1,45 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'api-health-dev',
+        configureServer(server) {
+          server.middlewares.use('/api/health', (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+            const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+            if (!supabaseUrl || !supabaseKey) {
+              res.statusCode = 200;
+              res.end(
+                JSON.stringify({
+                  status: 'warning',
+                  database: 'unconfigured',
+                  provider: 'supabase',
+                  message: 'Production database environment variables are not configured.',
+                  hint: 'Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your Vercel Project Settings.',
+                })
+              );
+              return;
+            }
+            res.statusCode = 200;
+            res.end(
+              JSON.stringify({
+                status: 'ok',
+                database: 'connected',
+                provider: 'supabase',
+              })
+            );
+          });
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
