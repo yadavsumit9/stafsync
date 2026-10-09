@@ -48,6 +48,11 @@ export const StaffLeavePortal: React.FC = () => {
       return;
     }
 
+    if (!currentEmp) {
+      setErrorMsg('No linked employee profile found for your account. Please contact Administrator.');
+      return;
+    }
+
     const diffDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1);
 
     const res = applyLeave({

@@ -57,7 +57,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     employees.find((e) => e.id === currentUser?.employeeId) ||
     employees[0];
 
-  const assignedShift = shifts.find((s) => s.id === currentEmp?.shiftId) || shifts[0];
+  const assignedShift =
+    shifts.find((s) => s.id === currentEmp?.shiftId) ||
+    shifts[0] ||
+    null;
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const formattedToday = new Date().toLocaleDateString('en-US', {
@@ -124,6 +127,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   }, [todayRecord?.punchIn, todayRecord?.punchInAt, todayRecord?.punchOut, todayRecord?.status]);
 
   const handlePunchInClick = () => {
+    if (!currentEmp) {
+      setPunchFeedback({ type: 'error', message: 'No linked employee profile found.' });
+      return;
+    }
     setPunchFeedback(null);
     const res = punchIn(currentEmp.id, selectedWorkMode);
     if (res.success) {
@@ -135,6 +142,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
   const handleConfirmPunchOut = () => {
     setShowPunchOutConfirm(false);
+    if (!currentEmp) {
+      setPunchFeedback({ type: 'error', message: 'No linked employee profile found.' });
+      return;
+    }
     setPunchFeedback(null);
     const res = punchOut(currentEmp.id);
     if (res.success) {
@@ -145,8 +156,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   };
 
   const getExpectedStatus = (mins: number) => {
-    const halfDay = (assignedShift.halfDayThresholdHours ?? punchSettings.minHoursRequiredForHalfDay ?? 4) * 60;
-    const fullDay = (assignedShift.fullDayThresholdHours ?? punchSettings.minHoursRequiredForFullDay ?? 8) * 60;
+    const halfDay = ((assignedShift?.halfDayThresholdHours ?? punchSettings?.minHoursRequiredForHalfDay) ?? 4) * 60;
+    const fullDay = ((assignedShift?.fullDayThresholdHours ?? punchSettings?.minHoursRequiredForFullDay) ?? 8) * 60;
     if (mins < halfDay) return { text: 'EARLY OUT / INSUFFICIENT HOURS (0 Day)', color: 'text-rose-700 bg-rose-50 border-rose-200' };
     if (mins < fullDay) return { text: 'HALF DAY (0.5 Day)', color: 'text-amber-700 bg-amber-50 border-amber-200' };
     return { text: 'PRESENT (1.0 Day)', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
@@ -164,7 +175,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     .slice(0, 5);
 
   // Next upcoming holiday
-  const nextHoliday = holidays.find((h) => h.date >= todayStr) || holidays[0];
+  const nextHoliday = holidays.find((h) => h.date >= todayStr) || holidays[0] || null;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in">
@@ -175,10 +186,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             Self-Service Portal
           </span>
           <h1 className="text-2xl sm:text-[28px] font-semibold text-slate-900 tracking-tight mt-1.5">
-            Good Morning, {currentEmp?.name}
+            Good Morning, {currentEmp?.name || currentUser?.name || 'Staff Member'}
           </h1>
           <p className="text-sm font-normal text-slate-500 mt-1">
-            {formattedToday} · Standard Shift: {assignedShift.startTime} to {assignedShift.endTime}
+            {formattedToday} · {assignedShift ? `Standard Shift: ${assignedShift.startTime} to ${assignedShift.endTime}` : 'Real-time biometric attendance punch and shift telemetry'}
           </p>
         </div>
 
@@ -210,7 +221,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             {currentEmp && (
               <DigitalIdCard
                 employee={currentEmp}
-                shift={assignedShift}
+                shift={assignedShift || undefined}
               />
             )}
           </div>
@@ -224,19 +235,19 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
                 <span className="text-slate-500">Scheduled Hours</span>
                 <span className="font-bold text-slate-900 font-mono">
-                  {assignedShift.startTime} - {assignedShift.endTime}
+                  {assignedShift ? `${assignedShift.startTime} - ${assignedShift.endTime}` : '09:00 - 18:00'}
                 </span>
               </div>
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
                 <span className="text-slate-500">Grace Buffer</span>
                 <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  15 minutes (until 09:45 AM)
+                  {assignedShift ? `${assignedShift.gracePeriodMinutes || 10} minutes` : '10 minutes'}
                 </span>
               </div>
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50">
                 <span className="text-slate-500">Next Upcoming Holiday</span>
                 <span className="font-medium text-purple-700">
-                  {nextHoliday.name} ({nextHoliday.date})
+                  {nextHoliday ? `${nextHoliday.name} (${nextHoliday.date})` : 'No upcoming holidays'}
                 </span>
               </div>
             </div>
@@ -389,7 +400,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   {todayRecord?.punchIn || '--:--'}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Shift start: {assignedShift.startTime}
+                  Shift start: {assignedShift ? assignedShift.startTime : '09:00'}
                 </span>
               </div>
 
@@ -403,7 +414,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                     : '0h 00m'}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Min required: {assignedShift.minWorkingHours}h
+                  Min required: {assignedShift ? `${assignedShift.minWorkingHours}h` : '8h'}
                 </span>
               </div>
 
@@ -413,7 +424,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   {todayRecord?.punchOut || '--:--'}
                 </span>
                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                  Shift end: {assignedShift.endTime}
+                  Shift end: {assignedShift ? assignedShift.endTime : '18:00'}
                 </span>
               </div>
             </div>

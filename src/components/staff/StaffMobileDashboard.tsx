@@ -55,7 +55,10 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
     employees.find((e) => e.id === currentUser?.employeeId) ||
     employees[0];
 
-  const assignedShift = shifts.find((s) => s.id === currentEmp?.shiftId) || shifts[0];
+  const assignedShift =
+    shifts.find((s) => s.id === currentEmp?.shiftId) ||
+    shifts[0] ||
+    null;
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const formattedToday = now.toLocaleDateString('en-US', {
@@ -146,6 +149,10 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
   // Handlers with double-click protection & loading state
   const handleMobilePunchIn = () => {
     if (isSubmittingPunch) return;
+    if (!currentEmp) {
+      setPunchErrorMessage('No linked employee record found for your account.');
+      return;
+    }
     setIsSubmittingPunch(true);
     setPunchErrorMessage(null);
     setPunchSuccessToast(null);
@@ -259,7 +266,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
               {branding.projectName}
             </span>
             <span className="text-[10px] text-[#6B7280] font-normal leading-none block">
-              Good Morning, {currentEmp?.name.split(' ')[0]}
+              Good Morning, {currentEmp?.name ? currentEmp.name.split(' ')[0] : (currentUser?.name ? currentUser.name.split(' ')[0] : 'Staff')}
             </span>
           </div>
         </div>
@@ -289,11 +296,11 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
             {currentEmp?.avatar ? (
               <img
                 src={currentEmp.avatar}
-                alt={currentEmp.name}
+                alt={currentEmp?.name || 'Staff'}
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span>{currentEmp?.name.slice(0, 2).toUpperCase()}</span>
+              <span>{(currentEmp?.name || currentUser?.name || 'ST').slice(0, 2).toUpperCase()}</span>
             )}
           </button>
 
@@ -352,7 +359,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
               {currentEmp?.avatar ? (
                 <img
                   src={currentEmp.avatar}
-                  alt={currentEmp.name}
+                  alt={currentEmp?.name || 'Staff'}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -361,7 +368,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-semibold text-[#151515] leading-tight">
-                {currentEmp?.name}
+                {currentEmp?.name || currentUser?.name || 'Staff Member'}
               </h2>
               <div className="flex items-center gap-1.5 mt-0.5 text-xs text-[#6B7280]">
                 <span className="font-mono font-medium text-slate-700 text-[11px]">
@@ -596,7 +603,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#151515]">Today's Shift</span>
             <span className="text-[11px] font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-              {assignedShift.name}
+              {assignedShift ? assignedShift.name : 'General Shift'}
             </span>
           </div>
 
@@ -604,19 +611,19 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
             <div className="p-2 rounded-xl bg-[#F7F8F7]">
               <span className="text-[10px] text-[#6B7280] block">Timing</span>
               <span className="font-mono font-medium text-[#151515] block mt-0.5">
-                {assignedShift.startTime} - {assignedShift.endTime}
+                {assignedShift ? `${assignedShift.startTime} - ${assignedShift.endTime}` : '09:00 - 18:00'}
               </span>
             </div>
             <div className="p-2 rounded-xl bg-[#F7F8F7]">
               <span className="text-[10px] text-[#6B7280] block">Grace Period</span>
               <span className="font-mono font-medium text-emerald-700 block mt-0.5">
-                {assignedShift.gracePeriodMinutes} mins
+                {assignedShift ? `${assignedShift.gracePeriodMinutes} mins` : '10 mins'}
               </span>
             </div>
             <div className="p-2 rounded-xl bg-[#F7F8F7]">
               <span className="text-[10px] text-[#6B7280] block">Minimum Hours</span>
               <span className="font-mono font-medium text-[#151515] block mt-0.5">
-                {assignedShift.minWorkingHours} hours
+                {assignedShift ? `${assignedShift.minWorkingHours} hours` : '8 hours'}
               </span>
             </div>
           </div>
@@ -1038,7 +1045,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
             <div>
               <h3 className="text-base font-bold text-slate-900">Sign Out</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Are you sure you want to sign out of <strong>{currentEmp?.name}</strong>?
+                Are you sure you want to sign out of <strong>{currentEmp?.name || currentUser?.name || 'Staff'}</strong>?
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2.5 pt-1">

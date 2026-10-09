@@ -350,7 +350,7 @@ function MainApp() {
                 title="View Profile"
                 aria-label="View profile"
               >
-                {currentUser.name.slice(0, 2).toUpperCase()}
+                {(currentUser?.name || 'US').slice(0, 2).toUpperCase()}
               </button>
               <button
                 onClick={() => setShowMobileLogoutModal(true)}
@@ -384,7 +384,7 @@ function MainApp() {
               <div>
                 <h3 className="text-base font-bold text-slate-900">Sign Out</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Are you sure you want to sign out of <strong>{currentUser.name}</strong>?
+                  Are you sure you want to sign out of <strong>{currentUser?.name || 'your account'}</strong>?
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2.5 pt-1">

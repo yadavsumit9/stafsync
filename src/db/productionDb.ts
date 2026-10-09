@@ -96,6 +96,8 @@ class ProductionDatabase {
 
         if (savedData) {
           this.db = new SQL.Database(savedData);
+          this.createTables();
+          this.persist();
         } else {
           this.db = new SQL.Database();
           this.createTables();
@@ -161,6 +163,7 @@ class ProductionDatabase {
 
       CREATE TABLE IF NOT EXISTS attendance (
         id TEXT PRIMARY KEY,
+        organization_id TEXT DEFAULT 'ORG_DEFAULT',
         employee_id TEXT NOT NULL,
         employee_name TEXT NOT NULL,
         department TEXT NOT NULL,
@@ -169,11 +172,26 @@ class ProductionDatabase {
         shift_name TEXT NOT NULL,
         punch_in TEXT,
         punch_out TEXT,
+        punch_in_at TEXT,
+        punch_out_at TEXT,
+        punch_in_status TEXT,
+        punch_out_status TEXT,
+        early_minutes INTEGER DEFAULT 0,
+        late_minutes INTEGER DEFAULT 0,
+        grace_adjusted_late_minutes INTEGER DEFAULT 0,
         status TEXT NOT NULL,
+        attendance_value REAL DEFAULT 0,
         work_mode TEXT NOT NULL,
         working_hours_minutes INTEGER DEFAULT 0,
+        break_minutes INTEGER DEFAULT 0,
         late_duration_minutes INTEGER DEFAULT 0,
         overtime_minutes INTEGER DEFAULT 0,
+        shift_start_at TEXT,
+        shift_end_at TEXT,
+        half_day_threshold_minutes INTEGER DEFAULT 240,
+        full_day_threshold_minutes INTEGER DEFAULT 480,
+        calculation_source TEXT DEFAULT 'SERVER_PUNCH',
+        manual_adjustment_reason TEXT,
         remarks TEXT,
         modified_by TEXT,
         modified_at TEXT,
@@ -208,6 +226,13 @@ class ProductionDatabase {
         grace_period_minutes INTEGER NOT NULL,
         min_working_hours INTEGER NOT NULL,
         max_working_hours INTEGER NOT NULL,
+        break_duration_minutes INTEGER DEFAULT 60,
+        half_day_threshold_hours INTEGER DEFAULT 4,
+        full_day_threshold_hours INTEGER DEFAULT 8,
+        allow_early_punch_in INTEGER DEFAULT 1,
+        max_early_punch_in_minutes INTEGER DEFAULT 60,
+        enable_overtime INTEGER DEFAULT 1,
+        working_days TEXT DEFAULT 'Monday,Tuesday,Wednesday,Thursday,Friday',
         description TEXT
       );
 
@@ -245,47 +270,119 @@ class ProductionDatabase {
       );
     `);
 
-    // Safe dynamic migration for attendance table
-    const attendanceColumns = [
-      'organization_id TEXT DEFAULT "ORG_DEFAULT"',
-      'punch_in_at TEXT',
-      'punch_out_at TEXT',
-      'punch_in_status TEXT',
-      'punch_out_status TEXT',
-      'early_minutes INTEGER DEFAULT 0',
-      'late_minutes INTEGER DEFAULT 0',
-      'grace_adjusted_late_minutes INTEGER DEFAULT 0',
-      'attendance_value REAL DEFAULT 0',
-      'break_minutes INTEGER DEFAULT 0',
-      'shift_start_at TEXT',
-      'shift_end_at TEXT',
-      'half_day_threshold_minutes INTEGER DEFAULT 240',
-      'full_day_threshold_minutes INTEGER DEFAULT 480',
-      'calculation_source TEXT DEFAULT "SERVER_PUNCH"',
-      'manual_adjustment_reason TEXT',
-    ];
+    this.ensureTableColumns();
+  }
 
-    for (const col of attendanceColumns) {
-      try {
-        this.db.run(`ALTER TABLE attendance ADD COLUMN ${col}`);
-      } catch {}
+  public ensureTableColumns(): void {
+    if (!this.db) return;
+
+    // Safe dynamic migration for attendance table
+    try {
+      const tableInfo = this.db.exec('PRAGMA table_info(attendance)');
+      const existingCols = new Set<string>();
+      if (tableInfo && tableInfo[0] && tableInfo[0].values) {
+        for (const row of tableInfo[0].values) {
+          existingCols.add(String(row[1]));
+        }
+      }
+
+      const attendanceColDefs: [string, string][] = [
+        ['organization_id', "TEXT DEFAULT 'ORG_DEFAULT'"],
+        ['punch_in_at', 'TEXT'],
+        ['punch_out_at', 'TEXT'],
+        ['punch_in_status', 'TEXT'],
+        ['punch_out_status', 'TEXT'],
+        ['early_minutes', 'INTEGER DEFAULT 0'],
+        ['late_minutes', 'INTEGER DEFAULT 0'],
+        ['grace_adjusted_late_minutes', 'INTEGER DEFAULT 0'],
+        ['attendance_value', 'REAL DEFAULT 0'],
+        ['break_minutes', 'INTEGER DEFAULT 0'],
+        ['shift_start_at', 'TEXT'],
+        ['shift_end_at', 'TEXT'],
+        ['half_day_threshold_minutes', 'INTEGER DEFAULT 240'],
+        ['full_day_threshold_minutes', 'INTEGER DEFAULT 480'],
+        ['calculation_source', "TEXT DEFAULT 'SERVER_PUNCH'"],
+        ['manual_adjustment_reason', 'TEXT'],
+        ['remarks', 'TEXT'],
+        ['modified_by', 'TEXT'],
+        ['modified_at', 'TEXT'],
+        ['modification_reason', 'TEXT'],
+      ];
+
+      for (const [colName, colDef] of attendanceColDefs) {
+        if (!existingCols.has(colName)) {
+          try {
+            this.db.run(`ALTER TABLE attendance ADD COLUMN ${colName} ${colDef}`);
+          } catch (colErr) {
+            console.warn(`Failed to add column ${colName} to attendance:`, colErr);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Attendance columns check warning:', e);
     }
 
     // Safe dynamic migration for shifts table
-    const shiftColumns = [
-      'break_duration_minutes INTEGER DEFAULT 60',
-      'half_day_threshold_hours INTEGER DEFAULT 4',
-      'full_day_threshold_hours INTEGER DEFAULT 8',
-      'allow_early_punch_in INTEGER DEFAULT 1',
-      'max_early_punch_in_minutes INTEGER DEFAULT 60',
-      'enable_overtime INTEGER DEFAULT 1',
-      'working_days TEXT DEFAULT "Monday,Tuesday,Wednesday,Thursday,Friday"',
-    ];
+    try {
+      const shiftTableInfo = this.db.exec('PRAGMA table_info(shifts)');
+      const existingShiftCols = new Set<string>();
+      if (shiftTableInfo && shiftTableInfo[0] && shiftTableInfo[0].values) {
+        for (const row of shiftTableInfo[0].values) {
+          existingShiftCols.add(String(row[1]));
+        }
+      }
 
-    for (const col of shiftColumns) {
-      try {
-        this.db.run(`ALTER TABLE shifts ADD COLUMN ${col}`);
-      } catch {}
+      const shiftColDefs: [string, string][] = [
+        ['break_duration_minutes', 'INTEGER DEFAULT 60'],
+        ['half_day_threshold_hours', 'INTEGER DEFAULT 4'],
+        ['full_day_threshold_hours', 'INTEGER DEFAULT 8'],
+        ['allow_early_punch_in', 'INTEGER DEFAULT 1'],
+        ['max_early_punch_in_minutes', 'INTEGER DEFAULT 60'],
+        ['enable_overtime', 'INTEGER DEFAULT 1'],
+        ['working_days', "TEXT DEFAULT 'Monday,Tuesday,Wednesday,Thursday,Friday'"],
+        ['description', 'TEXT'],
+      ];
+
+      for (const [colName, colDef] of shiftColDefs) {
+        if (!existingShiftCols.has(colName)) {
+          try {
+            this.db.run(`ALTER TABLE shifts ADD COLUMN ${colName} ${colDef}`);
+          } catch (colErr) {
+            console.warn(`Failed to add column ${colName} to shifts:`, colErr);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Shifts columns check warning:', e);
+    }
+
+    // Safe dynamic migration for employees table
+    try {
+      const empTableInfo = this.db.exec('PRAGMA table_info(employees)');
+      const existingEmpCols = new Set<string>();
+      if (empTableInfo && empTableInfo[0] && empTableInfo[0].values) {
+        for (const row of empTableInfo[0].values) {
+          existingEmpCols.add(String(row[1]));
+        }
+      }
+
+      const empColDefs: [string, string][] = [
+        ['allow_flexible_work_mode', 'INTEGER DEFAULT 0'],
+        ['weekly_off_days', "TEXT DEFAULT 'Sunday,Saturday'"],
+        ['default_work_mode', "TEXT DEFAULT 'OFFICE'"],
+      ];
+
+      for (const [colName, colDef] of empColDefs) {
+        if (!existingEmpCols.has(colName)) {
+          try {
+            this.db.run(`ALTER TABLE employees ADD COLUMN ${colName} ${colDef}`);
+          } catch (colErr) {
+            console.warn(`Failed to add column ${colName} to employees:`, colErr);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Employees columns check warning:', e);
     }
   }
 
@@ -1209,6 +1306,7 @@ class ProductionDatabase {
     lateMinutes?: number;
   } {
     if (!this.db) return { success: false, message: 'Database not ready' };
+    this.ensureTableColumns();
 
     const emps = this.getEmployees();
     const emp = emps.find((e) => e.id.toUpperCase() === employeeId.trim().toUpperCase());
@@ -1308,6 +1406,7 @@ class ProductionDatabase {
 
   public punchOut(employeeId: string): { success: boolean; message: string; record?: AttendanceRecord } {
     if (!this.db) return { success: false, message: 'Database not ready' };
+    this.ensureTableColumns();
 
     const emps = this.getEmployees();
     const emp = emps.find((e) => e.id.toUpperCase() === employeeId.trim().toUpperCase());
@@ -1391,6 +1490,7 @@ class ProductionDatabase {
 
   public adminAddAttendanceRecord(rec: AttendanceRecord): { success: boolean; message: string } {
     if (!this.db) return { success: false, message: 'Database not ready' };
+    this.ensureTableColumns();
 
     const attVal = rec.attendanceValue !== undefined
       ? rec.attendanceValue

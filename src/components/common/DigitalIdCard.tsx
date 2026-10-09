@@ -43,7 +43,7 @@ export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, o
         {/* Status chip */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>{employee.status.toUpperCase()}</span>
+          <span>{(employee?.status || 'Active').toUpperCase()}</span>
         </div>
       </div>
 
@@ -53,11 +53,13 @@ export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, o
         <div className="relative shrink-0">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#087A4B] via-emerald-500 to-teal-300 p-0.5 shadow-md">
             <div className="w-full h-full rounded-[14px] bg-[#12241C] flex items-center justify-center text-white text-2xl font-bold">
-              {employee.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .slice(0, 2)}
+              {employee?.name
+                ? employee.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                : 'EM'}
             </div>
           </div>
           <div className="absolute -bottom-1 -right-1 p-1 bg-[#087A4B] rounded-full text-white shadow-xs">
@@ -67,23 +69,23 @@ export const DigitalIdCard: React.FC<DigitalIdCardProps> = ({ employee, shift, o
 
         {/* Identity Details */}
         <div className="flex-1 text-center sm:text-left space-y-1">
-          <h3 className="text-lg font-bold text-white tracking-tight">{employee.name}</h3>
+          <h3 className="text-lg font-bold text-white tracking-tight">{employee?.name || 'Employee'}</h3>
           <p className="text-xs text-emerald-300 font-medium">
-            {employee.designation || employee.position}
+            {employee?.designation || employee?.position || 'Staff'}
           </p>
           <p className="text-xs text-slate-300 flex items-center justify-center sm:justify-start gap-1">
             <Building className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{employee.department} Department</span>
+            <span>{employee?.department || 'Operations'} Department</span>
           </p>
 
           <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-white text-[11px] font-mono">
               <Hash className="w-3 h-3 text-emerald-400" />
-              {employee.id}
+              {employee?.id || 'ID Pending'}
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-emerald-200 text-[11px]">
               <Briefcase className="w-3 h-3 text-emerald-400" />
-              {employee.employmentType}
+              {employee?.employmentType || 'Full-time'}
             </span>
           </div>
         </div>

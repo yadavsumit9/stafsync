@@ -47,7 +47,25 @@ export const StaffProfile: React.FC = () => {
     setIsEditingContact(false);
   };
 
-  if (!currentEmp) return null;
+  if (!currentEmp) {
+    return (
+      <div className="p-8 max-w-md mx-auto my-12 bg-white rounded-3xl border border-slate-200 text-center space-y-4 shadow-sm animate-in fade-in">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto">
+          <User className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900">No Profile Assigned</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Your account is logged in as Staff, but does not have a linked employee record. Contact your Administrator to assign your profile.
+        </p>
+        <button
+          onClick={logout}
+          className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
+        >
+          Sign Out
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1440px] mx-auto animate-in fade-in pb-24 lg:pb-8">
