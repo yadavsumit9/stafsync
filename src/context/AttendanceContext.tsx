@@ -25,6 +25,7 @@ import {
   INITIAL_COMPANY_SETTINGS,
   INITIAL_BRANDING,
 } from '../data/initialData';
+import { getCachedBranding } from '../utils/brandingSecurity';
 
 interface LoginResponse {
   success: boolean;
@@ -34,6 +35,7 @@ interface LoginResponse {
 }
 
 interface AttendanceContextType {
+  isDbReady: boolean;
   currentUser: AuthUser | null;
   mustChangePasswordState: boolean;
   employees: Employee[];
@@ -143,7 +145,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [holidays, setHolidays] = useState<Holiday[]>(INITIAL_HOLIDAYS);
   const [punchSettings, setPunchSettings] = useState<PunchSettings>(INITIAL_PUNCH_SETTINGS);
   const [companySettings, setCompanySettings] = useState<CompanySettings>(INITIAL_COMPANY_SETTINGS);
-  const [branding, setBranding] = useState<BrandingSettings>(INITIAL_BRANDING);
+  const [branding, setBranding] = useState<BrandingSettings>(() => getCachedBranding(INITIAL_BRANDING));
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -180,9 +182,15 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       localStorage.removeItem('staffsync_notifications_v1');
     } catch {}
 
+    const bootStartTime = Date.now();
     productionDb.initialize().then(() => {
-      setIsDbReady(true);
       refreshData();
+      // Guarantee smooth buffering transition (minimum 400ms) to prevent any flash of unstyled/unready content
+      const elapsed = Date.now() - bootStartTime;
+      const delay = Math.max(0, 400 - elapsed);
+      setTimeout(() => {
+        setIsDbReady(true);
+      }, delay);
     });
   }, [refreshData]);
 
@@ -512,6 +520,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   return (
     <AttendanceContext.Provider
       value={{
+        isDbReady,
         currentUser,
         mustChangePasswordState,
         employees,

@@ -4,6 +4,7 @@ import { LoginPage } from './components/auth/LoginPage';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
 import { AdminDesktopRequiredScreen } from './components/common/AdminDesktopRequiredScreen';
+import { AppLoadingScreen } from './components/common/AppLoadingScreen';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { EmployeeManagement } from './components/admin/EmployeeManagement';
 import { AttendanceManagement } from './components/admin/AttendanceManagement';
@@ -60,7 +61,7 @@ function getTabLabel(tab: string, defaultName = 'StaffSync'): string {
 }
 
 function MainApp() {
-  const { currentUser, logout, leaves, notifications, branding } = useAttendance();
+  const { isDbReady, currentUser, logout, leaves, notifications, branding } = useAttendance();
   const { width, isMobile, isAdminSupported } = useViewport();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -74,6 +75,11 @@ function MainApp() {
     const tabName = getTabLabel(currentTab);
     document.title = currentTab === 'dashboard' ? `${name} — Dashboard` : `${name} — ${tabName}`;
   }, [currentTab, branding?.projectName]);
+
+  // Minimalist Circle Buffer while database & branding initialize
+  if (!isDbReady) {
+    return <AppLoadingScreen />;
+  }
 
   // If user is not logged in, show unified Login Page
   if (!currentUser) {

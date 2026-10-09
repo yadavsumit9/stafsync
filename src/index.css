@@ -73,3 +73,48 @@
   background: #BAC0BD;
 }
 
+/* Minimalist Buffering Animations */
+@keyframes modern-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(40%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes modern-pulse-glow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes modern-orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-indeterminate {
+  animation: modern-indeterminate 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.animate-pulse-glow {
+  animation: modern-pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-orbit-slow {
+  animation: modern-orbit 14s linear infinite;
+}
+

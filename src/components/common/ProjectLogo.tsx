@@ -50,6 +50,11 @@ export const ProjectLogo: React.FC<ProjectLogoProps> = ({
   const activeLogoUrl = customLogoUrl !== undefined ? customLogoUrl : branding?.logoUrl;
   const projectName = branding?.projectName || 'StaffSync';
 
+  // Reset error state if logo URL changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [activeLogoUrl]);
+
   const sizeMap = {
     xs: { badge: 'w-7 h-7 rounded-lg', icon: 'w-4 h-4', img: 'max-h-5 max-w-5' },
     sm: { badge: 'w-8 h-8 rounded-xl', icon: 'w-4.5 h-4.5', img: 'max-h-6 max-w-6' },

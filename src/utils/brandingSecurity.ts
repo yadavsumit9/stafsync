@@ -1,6 +1,93 @@
 /**
  * Security & Validation utilities for Company Branding / White-Label Assets
  */
+import { BrandingSettings } from '../types';
+
+export const BRANDING_STORAGE_CACHE_KEY = 'staffsync_branding_cache_v1';
+
+/**
+ * Retrieves instantly cached branding settings from localStorage.
+ * Used for zero-latency synchronous initialization on page reload before sqlite WASM boot.
+ */
+export function getCachedBranding(fallback: BrandingSettings): BrandingSettings {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const raw = localStorage.getItem(BRANDING_STORAGE_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.projectName === 'string') {
+        return {
+          ...fallback,
+          ...parsed,
+        };
+      }
+    }
+  } catch {
+    // Fail silently to prevent console error reporting
+  }
+  return fallback;
+}
+
+/**
+ * Safely caches branding settings to localStorage for instant startup retrieval.
+ * Gracefully handles storage quotas without throwing or logging uncaught console errors.
+ */
+export function cacheBranding(branding: BrandingSettings): void {
+  if (typeof window === 'undefined') return;
+  try {
+    // If logoUrl is very large (e.g. > 80KB), don't store large media in the synchronous cache
+    // to prevent exceeding browser localStorage quota limits (~5MB total per origin)
+    let payload = branding;
+    if (branding.logoUrl && branding.logoUrl.length > 80000) {
+      payload = {
+        ...branding,
+        logoUrl: null,
+      };
+    }
+    if (payload.faviconUrl && payload.faviconUrl.length > 40000) {
+      payload = {
+        ...payload,
+        faviconUrl: null,
+      };
+    }
+
+    try {
+      localStorage.setItem(BRANDING_STORAGE_CACHE_KEY, JSON.stringify(payload));
+    } catch {
+      // Storage quota exceeded; attempt a lightweight fallback with just the text branding
+      try {
+        const lightweight: BrandingSettings = {
+          organizationId: branding.organizationId,
+          projectName: branding.projectName,
+          logoUrl: null,
+          faviconUrl: null,
+          updatedAt: branding.updatedAt,
+          updatedBy: branding.updatedBy,
+        };
+        localStorage.setItem(BRANDING_STORAGE_CACHE_KEY, JSON.stringify(lightweight));
+      } catch {
+        // If storage is completely full, remove the key quietly
+        try {
+          localStorage.removeItem(BRANDING_STORAGE_CACHE_KEY);
+        } catch {}
+      }
+    }
+  } catch {
+    // Fail silently
+  }
+}
+
+/**
+ * Removes cached branding settings.
+ */
+export function clearCachedBranding(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(BRANDING_STORAGE_CACHE_KEY);
+  } catch {
+    // Fail silently
+  }
+}
 
 export interface FileValidationResult {
   valid: boolean;
@@ -165,5 +252,80 @@ export function fileToDataUrl(file: File): Promise<string> {
     };
     reader.onerror = () => reject(reader.error || new Error('Error reading file'));
     reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Optimizes an uploaded image file (PNG, JPG, WEBP) by resizing it to a sensible maximum
+ * bounding box and compressing it, preventing QuotaExceededError in browser storage while
+ * retaining crisp display fidelity for logos and favicons.
+ * For SVG files, returns the sanitized SVG data URL directly.
+ */
+export async function optimizeImageFile(
+  file: File,
+  maxDimension = 512,
+  quality = 0.9
+): Promise<string> {
+  const fileType = file.type.toLowerCase();
+  const isSvg = fileType === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+
+  if (isSvg) {
+    const text = await file.text();
+    const sanitized = sanitizeSvg(text);
+    return `data:image/svg+xml;utf8,${encodeURIComponent(sanitized)}`;
+  }
+
+  // Raster image optimization via Canvas
+  const rawDataUrl = await fileToDataUrl(file);
+
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      resolve(rawDataUrl);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      // Only downscale if larger than maxDimension
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(rawDataUrl);
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      try {
+        const mime = fileType.includes('png') ? 'image/png' : 'image/webp';
+        const compressed = canvas.toDataURL(mime, quality);
+        resolve(compressed);
+      } catch {
+        resolve(canvas.toDataURL('image/png'));
+      }
+    };
+
+    img.onerror = () => {
+      resolve(rawDataUrl);
+    };
+
+    img.src = rawDataUrl;
   });
 }

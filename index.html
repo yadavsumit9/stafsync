@@ -5,6 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>StaffSync - Staff Attendance Management System</title>
+    <script>
+      (function() {
+        try {
+          var raw = localStorage.getItem('staffsync_branding_cache_v1');
+          if (raw) {
+            var b = JSON.parse(raw);
+            if (b && b.projectName) {
+              document.title = b.projectName + ' — Staff Attendance Management System';
+            }
+            if (b && b.faviconUrl) {
+              var link = document.querySelector("link[rel*='icon']");
+              if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.head.appendChild(link);
+              }
+              link.href = b.faviconUrl;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content="Production-ready Staff Attendance Management System with comprehensive Admin Panel and Employee Self-Service Portal." />
     <meta property="og:title" content="StaffSync - Staff Attendance Management System" />
     <meta property="og:description" content="Production-ready Staff Attendance Management System with comprehensive Admin Panel and Employee Self-Service Portal." />

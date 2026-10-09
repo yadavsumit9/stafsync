@@ -23,7 +23,12 @@ import {
   evaluatePunchOut,
   getServerTime,
 } from '../utils/attendanceEngine';
-import { INITIAL_PUNCH_SETTINGS, INITIAL_SHIFTS } from '../data/initialData';
+import { INITIAL_PUNCH_SETTINGS, INITIAL_SHIFTS, INITIAL_BRANDING } from '../data/initialData';
+import {
+  cacheBranding,
+  clearCachedBranding,
+  getCachedBranding,
+} from '../utils/brandingSecurity';
 
 export interface AdminSecurityProfile {
   adminId: string;
@@ -1930,22 +1935,19 @@ class ProductionDatabase {
     const raw = this.getSetting('branding_settings');
     if (raw) {
       try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (parsed) {
+          return parsed;
+        }
       } catch {}
     }
-    return {
-      organizationId: 'ORG_DEFAULT',
-      projectName: 'StaffSync',
-      logoUrl: null,
-      faviconUrl: null,
-      updatedAt: new Date().toISOString(),
-      updatedBy: 'System Default',
-    };
+    const cached = getCachedBranding(INITIAL_BRANDING);
+    return cached;
   }
 
   public updateBranding(updates: Partial<BrandingSettings>): { success: boolean; message: string } {
     const cur = this.getBranding();
-    const updated = {
+    const updated: BrandingSettings = {
       ...cur,
       ...updates,
       updatedAt: new Date().toLocaleString('en-IN', {
@@ -1956,6 +1958,7 @@ class ProductionDatabase {
       updatedBy: 'Administrator',
     };
     this.saveSetting('branding_settings', JSON.stringify(updated));
+    cacheBranding(updated);
     return { success: true, message: 'Branding settings updated successfully.' };
   }
 
@@ -1969,6 +1972,7 @@ class ProductionDatabase {
       updatedBy: 'System Default',
     };
     this.saveSetting('branding_settings', JSON.stringify(def));
+    clearCachedBranding();
     return { success: true, message: 'Branding reset to default.' };
   }
 }

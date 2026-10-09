@@ -19,7 +19,7 @@ import { useBranding } from '../../context/AttendanceContext';
 import {
   validateLogoFile,
   validateFaviconFile,
-  fileToDataUrl,
+  optimizeImageFile,
 } from '../../utils/brandingSecurity';
 import { ProjectLogoMark } from '../common/ProjectLogo';
 
@@ -62,12 +62,9 @@ export const BrandingSettingsCard: React.FC = () => {
 
     try {
       if (validation.sanitizedContent) {
-        // SVG sanitized
-        const blob = new Blob([validation.sanitizedContent], { type: 'image/svg+xml' });
-        const dataUrl = await fileToDataUrl(new File([blob], file.name, { type: 'image/svg+xml' }));
-        setLogoDataUrl(dataUrl);
+        setLogoDataUrl(`data:image/svg+xml;utf8,${encodeURIComponent(validation.sanitizedContent)}`);
       } else {
-        const dataUrl = await fileToDataUrl(file);
+        const dataUrl = await optimizeImageFile(file, 512, 0.9);
         setLogoDataUrl(dataUrl);
       }
     } catch {
@@ -86,11 +83,9 @@ export const BrandingSettingsCard: React.FC = () => {
 
     try {
       if (validation.sanitizedContent) {
-        const blob = new Blob([validation.sanitizedContent], { type: 'image/svg+xml' });
-        const dataUrl = await fileToDataUrl(new File([blob], file.name, { type: 'image/svg+xml' }));
-        setFaviconDataUrl(dataUrl);
+        setFaviconDataUrl(`data:image/svg+xml;utf8,${encodeURIComponent(validation.sanitizedContent)}`);
       } else {
-        const dataUrl = await fileToDataUrl(file);
+        const dataUrl = await optimizeImageFile(file, 128, 0.9);
         setFaviconDataUrl(dataUrl);
       }
     } catch {
