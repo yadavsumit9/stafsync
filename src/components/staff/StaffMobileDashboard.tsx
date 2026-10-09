@@ -102,20 +102,38 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
     todayRecord?.status === 'WEEK OFF' ||
     Boolean(currentEmp?.weeklyOffDays?.includes(todayDayName));
 
-  // Live timer for WORKING state
-  const [elapsedMinutes, setElapsedMinutes] = useState(
-    todayRecord?.workingHoursMinutes || 0
-  );
+  // Live timer calculated from server timestamp
+  const calculateMobileElapsed = () => {
+    if (!todayRecord?.punchIn) return 0;
+    if (todayRecord.punchOut && todayRecord.workingHoursMinutes !== undefined) {
+      return todayRecord.workingHoursMinutes;
+    }
+    if (todayRecord.punchInAt) {
+      const startMs = new Date(todayRecord.punchInAt).getTime();
+      return Math.max(0, Math.floor((Date.now() - startMs) / (1000 * 60)));
+    }
+    const parts = todayRecord.punchIn.split(' ');
+    const [h, m] = parts[0].split(':').map((n) => parseInt(n, 10));
+    let startMin = (h % 12) * 60 + m;
+    if (parts[1]?.toUpperCase() === 'PM') startMin += 720;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return Math.max(0, nowMin - startMin);
+  };
+
+  const [elapsedMinutes, setElapsedMinutes] = useState(calculateMobileElapsed());
+  const [showMobilePunchOutConfirm, setShowMobilePunchOutConfirm] = useState(false);
 
   useEffect(() => {
+    setElapsedMinutes(calculateMobileElapsed());
     let timer: any;
-    if (todayRecord?.status === 'WORKING') {
+    if (todayRecord?.punchIn && !todayRecord?.punchOut) {
       timer = setInterval(() => {
-        setElapsedMinutes((prev) => prev + 1);
-      }, 60000);
+        setElapsedMinutes(calculateMobileElapsed());
+      }, 10000);
     }
     return () => clearInterval(timer);
-  }, [todayRecord?.status]);
+  }, [todayRecord?.punchIn, todayRecord?.punchInAt, todayRecord?.punchOut, todayRecord?.status]);
 
   useEffect(() => {
     if (todayRecord?.workMode) {
@@ -443,7 +461,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
                   </button>
                 )}
               </div>
-            ) : todayRecord.status === 'WORKING' ? (
+            ) : todayRecord?.punchIn && !todayRecord?.punchOut ? (
               <div>
                 {!punchSettings.enablePunchOut ? (
                   <div className="p-3.5 bg-amber-50 text-amber-900 rounded-xl text-xs text-center font-medium border border-amber-200">
@@ -453,7 +471,7 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
                   <button
                     type="button"
                     disabled={isSubmittingPunch}
-                    onClick={handleMobilePunchOut}
+                    onClick={() => setShowMobilePunchOutConfirm(true)}
                     className="w-full min-h-[48px] py-3.5 px-4 bg-[#151515] hover:bg-slate-800 active:bg-black text-white rounded-xl font-semibold text-sm transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                   >
                     {isSubmittingPunch ? (
@@ -461,19 +479,27 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
                     ) : (
                       <CheckCircle2 className="w-5 h-5 text-emerald-400 stroke-[2.2]" />
                     )}
-                    <span>PUNCH OUT</span>
+                    <span>PUNCH OUT (CONCLUDE SHIFT)</span>
                   </button>
                 )}
               </div>
             ) : (
-              <div className="p-3.5 bg-[#EAF6F0] rounded-xl border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#087A4B]" />
-                  <span className="font-semibold">Shift Attendance Completed</span>
+              <div className="p-3.5 bg-[#EAF6F0] rounded-xl border border-emerald-200 text-xs text-emerald-950 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#087A4B]" />
+                    <span className="font-semibold text-xs">Shift Completed: {todayRecord.status}</span>
+                  </div>
+                  <span className="font-mono text-[11px] font-bold text-[#087A4B] bg-white px-2 py-0.5 rounded border border-emerald-200">
+                    {todayRecord.punchOutStatus || 'NORMAL_OUT'}
+                  </span>
                 </div>
-                <span className="font-mono text-[11px] font-bold text-[#087A4B]">
-                  {todayRecord.punchOut}
-                </span>
+                {todayRecord.overtimeMinutes > 0 && (
+                  <div className="text-[11px] text-emerald-800 flex justify-between pt-1 border-t border-emerald-200/60 font-medium">
+                    <span>Overtime Earned:</span>
+                    <span className="font-bold font-mono">+{formatHours(todayRecord.overtimeMinutes)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -947,6 +973,59 @@ export const StaffMobileDashboard: React.FC<StaffMobileDashboardProps> = ({
           record={selectedCalendarRecord}
           onClose={() => setSelectedCalendarRecord(null)}
         />
+      )}
+
+      {/* Mobile Punch Out Confirmation Modal (Requirement 12) */}
+      {showMobilePunchOutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-5 w-full max-w-sm border border-slate-200 shadow-2xl text-left space-y-4 animate-in zoom-in-95">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Confirm Punch Out
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Conclude your working shift and submit attendance to the server.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Punch In Time:</span>
+                <span className="font-mono font-bold text-slate-900">{todayRecord?.punchIn || '--:--'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Working Time:</span>
+                <span className="font-mono font-bold text-[#087A4B]">{formatHours(elapsedMinutes)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span className="text-slate-500">Expected Result:</span>
+                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {elapsedMinutes < 240 ? 'Early Out (0 Day)' : elapsedMinutes < 480 ? 'Half Day (0.5 Day)' : 'Present (1.0 Day)'}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowMobilePunchOutConfirm(false)}
+                className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs transition-colors min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMobilePunchOutConfirm(false);
+                  handleMobilePunchOut();
+                }}
+                className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-xs shadow-xs transition-colors min-h-[44px]"
+              >
+                Confirm Punch Out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Logout Confirmation Modal */}

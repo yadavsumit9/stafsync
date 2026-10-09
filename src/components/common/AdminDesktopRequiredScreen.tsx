@@ -6,10 +6,12 @@ import { useBranding } from '../../context/AttendanceContext';
 
 interface AdminDesktopRequiredScreenProps {
   onBackToLogin: () => void;
+  onProceedAnyway?: () => void;
 }
 
 export const AdminDesktopRequiredScreen: React.FC<AdminDesktopRequiredScreenProps> = ({
   onBackToLogin,
+  onProceedAnyway,
 }) => {
   const { width } = useViewport();
   const { branding } = useBranding();
@@ -67,11 +69,24 @@ export const AdminDesktopRequiredScreen: React.FC<AdminDesktopRequiredScreenProp
           </p>
         </div>
 
-        {/* Action Button: Back to Login */}
-        <div className="mt-6 pt-2">
+        {/* Action Button: Back to Login & Proceed Anyway */}
+        <div className="mt-6 pt-2 space-y-2">
+          {onProceedAnyway && (
+            <button
+              onClick={onProceedAnyway}
+              className="w-full py-3 px-4 bg-[#087A4B] hover:bg-[#075C3A] text-white rounded-xl text-sm font-semibold transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Laptop className="w-4 h-4" />
+              <span>Proceed to Admin Dashboard (Preview)</span>
+            </button>
+          )}
           <button
             onClick={onBackToLogin}
-            className="w-full py-3 px-4 bg-[#087A4B] hover:bg-[#075C3A] text-white rounded-xl text-sm font-semibold transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+            className={`w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+              onProceedAnyway
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                : 'bg-[#087A4B] hover:bg-[#075C3A] text-white shadow-xs'
+            }`}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Login</span>

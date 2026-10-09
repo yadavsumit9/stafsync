@@ -150,6 +150,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Synchronize state with productionDb
   const refreshData = useCallback(() => {
     try {
+      productionDb.processAutoPunchOuts();
       setEmployees(productionDb.getEmployees());
       setShifts(productionDb.getShifts());
       setAttendance(productionDb.getAttendance());

@@ -210,11 +210,13 @@ export const StaffAttendanceHistory: React.FC = () => {
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-100 text-[#6B7280] font-semibold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Punch In</th>
-                <th className="py-3 px-4">Punch Out</th>
-                <th className="py-3 px-4">Total Duration</th>
-                <th className="py-3 px-4">Work Mode</th>
-                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Shift</th>
+                <th className="py-3 px-4">Punch In & Arrival</th>
+                <th className="py-3 px-4">Punch Out & Departure</th>
+                <th className="py-3 px-4">Worked Hours</th>
+                <th className="py-3 px-4">Attendance Status</th>
+                <th className="py-3 px-4">Overtime</th>
+                <th className="py-3 px-4">Mode</th>
                 <th className="py-3 px-4 text-right">Details</th>
               </tr>
             </thead>
@@ -226,18 +228,35 @@ export const StaffAttendanceHistory: React.FC = () => {
                   className="hover:bg-slate-50/70 cursor-pointer transition-colors"
                 >
                   <td className="py-3 px-4 font-mono font-medium text-[#151515]">{rec.date}</td>
-                  <td className="py-3 px-4 font-mono text-[#151515]">{rec.punchIn || '--:--'}</td>
-                  <td className="py-3 px-4 font-mono text-[#6B7280]">{rec.punchOut || '--:--'}</td>
-                  <td className="py-3 px-4 font-mono font-medium text-[#151515]">
-                    {rec.workingHoursMinutes > 0 ? formatHours(rec.workingHoursMinutes) : '-'}
+                  <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">{rec.shiftName || 'General Shift'}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[#151515] font-medium">{rec.punchIn || '--:--'}</span>
+                      {rec.punchIn && (
+                        <span className="text-[10px] font-semibold mt-0.5">
+                          {rec.punchInStatus === 'EARLY' || (rec.earlyMinutes && rec.earlyMinutes > 0) ? (
+                            <span className="text-blue-700">Early {rec.earlyMinutes}m</span>
+                          ) : rec.punchInStatus === 'LATE' || (rec.lateMinutes && rec.lateMinutes > 0) ? (
+                            <span className="text-amber-700">Late {rec.lateMinutes}m</span>
+                          ) : (
+                            <span className="text-emerald-700">On Time</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
-                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
-                      {rec.workMode === 'OFFICE' && <Building2 className="w-3 h-3 text-slate-500" />}
-                      {rec.workMode === 'WORK FROM HOME' && <Laptop className="w-3 h-3 text-blue-500" />}
-                      {rec.workMode === 'HYBRID' && <MapPin className="w-3 h-3 text-purple-500" />}
-                      <span>{rec.workMode}</span>
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[#151515] font-medium">{rec.punchOut || '--:--'}</span>
+                      {rec.punchOut && (
+                        <span className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                          {rec.punchOutStatus || 'NORMAL_OUT'}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 font-mono font-medium text-[#151515]">
+                    {rec.workingHoursMinutes > 0 ? formatHours(rec.workingHoursMinutes) : '-'}
                   </td>
                   <td className="py-3 px-4">
                     <span
@@ -246,6 +265,21 @@ export const StaffAttendanceHistory: React.FC = () => {
                       )}`}
                     >
                       {rec.status}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-mono text-xs">
+                    {rec.overtimeMinutes > 0 ? (
+                      <span className="font-semibold text-emerald-700">+{formatHours(rec.overtimeMinutes)}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+                      {rec.workMode === 'OFFICE' && <Building2 className="w-3 h-3 text-slate-500" />}
+                      {rec.workMode === 'WORK FROM HOME' && <Laptop className="w-3 h-3 text-blue-500" />}
+                      {rec.workMode === 'HYBRID' && <MapPin className="w-3 h-3 text-purple-500" />}
+                      <span>{rec.workMode}</span>
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">

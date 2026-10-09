@@ -7,7 +7,6 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
-  ShieldCheck,
 } from 'lucide-react';
 import { useAttendance } from '../../context/AttendanceContext';
 import { ProjectLogo } from '../common/ProjectLogo';

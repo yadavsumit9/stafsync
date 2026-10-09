@@ -79,12 +79,17 @@ export const AttendanceManagement: React.FC = () => {
       'Department',
       'Shift',
       'Punch In',
+      'Arrival Status',
+      'Early Minutes',
+      'Late Minutes',
       'Punch Out',
-      'Working Mins',
-      'Late Mins',
-      'Overtime Mins',
+      'Departure Status',
+      'Worked Hours',
+      'Attendance Status',
+      'Attendance Value',
+      'Overtime Minutes',
       'Work Mode',
-      'Status',
+      'Calculation Source',
       'Remarks',
       'Modified By',
     ];
@@ -97,13 +102,18 @@ export const AttendanceManagement: React.FC = () => {
       r.department,
       `"${r.shiftName}"`,
       r.punchIn || '',
+      r.punchInStatus || '',
+      r.earlyMinutes || 0,
+      r.lateMinutes || 0,
       r.punchOut || '',
-      r.workingHoursMinutes,
-      r.lateDurationMinutes,
-      r.overtimeMinutes,
-      r.workMode,
+      r.punchOutStatus || '',
+      formatHours(r.workingHoursMinutes),
       r.status,
-      `"${r.remarks}"`,
+      r.attendanceValue ?? (r.status === 'HALF DAY' ? 0.5 : r.status === 'PRESENT' ? 1.0 : 0),
+      r.overtimeMinutes || 0,
+      r.workMode,
+      r.calculationSource || 'SERVER_PUNCH',
+      `"${r.remarks || ''}"`,
       r.modifiedBy || '',
     ]);
 
@@ -115,7 +125,7 @@ export const AttendanceManagement: React.FC = () => {
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     const safePrefix = (branding?.projectName || 'StaffSync').replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.setAttribute('download', `${safePrefix}_Attendance_Report_${dateRange}_20261007.csv`);
+    link.setAttribute('download', `${safePrefix}_Attendance_Report_${dateRange}_${todayStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -304,21 +314,20 @@ export const AttendanceManagement: React.FC = () => {
               <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                 <th className="py-3.5 px-4">Date</th>
                 <th className="py-3.5 px-4">Employee</th>
-                <th className="py-3.5 px-4">Department</th>
                 <th className="py-3.5 px-4">Shift</th>
-                <th className="py-3.5 px-4">Punch In</th>
-                <th className="py-3.5 px-4">Punch Out</th>
-                <th className="py-3.5 px-4">Working Hours</th>
-                <th className="py-3.5 px-4">Work Mode</th>
+                <th className="py-3.5 px-4">Punch In & Arrival</th>
+                <th className="py-3.5 px-4">Punch Out & Departure</th>
+                <th className="py-3.5 px-4">Worked Hours</th>
                 <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Audit Note</th>
+                <th className="py-3.5 px-4">Overtime</th>
+                <th className="py-3.5 px-4">Work Mode</th>
                 <th className="py-3.5 px-4 text-right">Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredAttendance.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     No attendance records found for selected criteria.
                   </td>
                 </tr>
@@ -341,21 +350,35 @@ export const AttendanceManagement: React.FC = () => {
                           <span className="text-[10px] text-slate-400 font-mono">({rec.employeeId})</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-600">{rec.department}</td>
-                      <td className="py-3.5 px-4 text-slate-500">{rec.shiftName}</td>
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        {rec.punchIn || '--:--'}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-500">
-                        {rec.punchOut || '--:--'}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">
-                        {rec.workingHoursMinutes > 0 ? formatHours(rec.workingHoursMinutes) : '-'}
+                      <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">{rec.shiftName}</td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex flex-col">
+                          <span className="font-mono font-medium text-slate-800">{rec.punchIn || '--:--'}</span>
+                          {rec.punchIn && (
+                            <span className="text-[10px] font-semibold mt-0.5">
+                              {rec.punchInStatus === 'EARLY' || (rec.earlyMinutes && rec.earlyMinutes > 0) ? (
+                                <span className="text-blue-700">Early {rec.earlyMinutes}m</span>
+                              ) : rec.punchInStatus === 'LATE' || (rec.lateMinutes && rec.lateMinutes > 0) ? (
+                                <span className="text-amber-700">Late {rec.lateMinutes}m</span>
+                              ) : (
+                                <span className="text-emerald-700">On Time</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
-                          {rec.workMode}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="font-mono text-slate-600">{rec.punchOut || '--:--'}</span>
+                          {rec.punchOut && (
+                            <span className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                              {rec.punchOutStatus || 'NORMAL_OUT'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-900 font-mono">
+                        {rec.workingHoursMinutes > 0 ? formatHours(rec.workingHoursMinutes) : '-'}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
@@ -364,6 +387,10 @@ export const AttendanceManagement: React.FC = () => {
                               ? 'bg-emerald-50 text-emerald-700'
                               : rec.status === 'WORKING'
                               ? 'bg-emerald-100 text-[#087A4B] animate-pulse'
+                              : rec.status === 'HALF DAY'
+                              ? 'bg-amber-50 text-amber-700'
+                              : rec.status === 'EARLY_OUT'
+                              ? 'bg-rose-50 text-rose-700'
                               : rec.status === 'LATE'
                               ? 'bg-amber-50 text-amber-700'
                               : rec.status === 'ON LEAVE'
@@ -376,19 +403,22 @@ export const AttendanceManagement: React.FC = () => {
                           {rec.status}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 max-w-[160px] truncate text-slate-500 text-[11px]">
-                        {rec.modifiedBy ? (
-                          <span className="text-amber-700 font-medium" title={rec.modificationReason || ''}>
-                            Edited by {rec.modifiedBy}
-                          </span>
+                      <td className="py-3.5 px-4 font-mono text-xs">
+                        {rec.overtimeMinutes > 0 ? (
+                          <span className="font-semibold text-emerald-700">+{formatHours(rec.overtimeMinutes)}</span>
                         ) : (
-                          rec.remarks
+                          <span className="text-slate-400">—</span>
                         )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+                          {rec.workMode}
+                        </span>
                       </td>
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setSelectedRecord(rec)}
-                          className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           title="Edit Attendance"
                         >
                           <Edit className="w-4 h-4" />

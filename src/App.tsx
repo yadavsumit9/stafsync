@@ -66,6 +66,7 @@ function MainApp() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [menuSearch, setMenuSearch] = useState('');
   const [showMobileLogoutModal, setShowMobileLogoutModal] = useState(false);
+  const [bypassDesktopCheck, setBypassDesktopCheck] = useState(false);
 
   // Dynamic Browser Tab Title updating with Project Name & Tab
   useEffect(() => {
@@ -93,8 +94,13 @@ function MainApp() {
   // show dedicated full-screen "Desktop Required" restriction screen.
   // This occurs BEFORE rendering the Admin Dashboard or sidebar.
   // ============================================================
-  if (isAdmin && !isAdminSupported) {
-    return <AdminDesktopRequiredScreen onBackToLogin={logout} />;
+  if (isAdmin && !isAdminSupported && !bypassDesktopCheck) {
+    return (
+      <AdminDesktopRequiredScreen
+        onBackToLogin={logout}
+        onProceedAnyway={() => setBypassDesktopCheck(true)}
+      />
+    );
   }
 
   const pendingLeavesCount = leaves.filter((l) => l.status === 'Pending').length;

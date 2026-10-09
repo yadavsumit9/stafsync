@@ -1,15 +1,22 @@
 export type UserRole = 'admin' | 'staff';
 
+export type ArrivalStatus = 'EARLY' | 'ON_TIME' | 'LATE';
+
+export type DepartureStatus = 'EARLY_OUT' | 'NORMAL_OUT' | 'OVERTIME' | 'MISSING';
+
 export type AttendanceStatus =
   | 'NOT PUNCHED IN'
   | 'WORKING'
+  | 'IN_PROGRESS'
   | 'PRESENT'
   | 'LATE'
   | 'ABSENT'
   | 'ON LEAVE'
   | 'WEEK OFF'
   | 'HOLIDAY'
-  | 'HALF DAY';
+  | 'HALF DAY'
+  | 'HALF_DAY'
+  | 'EARLY_OUT';
 
 export type WorkMode = 'OFFICE' | 'WORK FROM HOME' | 'HYBRID';
 
@@ -25,11 +32,18 @@ export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 export interface Shift {
   id: string;
   name: string;
-  startTime: string; // "09:30"
-  endTime: string;   // "18:30"
-  gracePeriodMinutes: number; // 15
+  startTime: string; // "09:00"
+  endTime: string;   // "18:00"
+  gracePeriodMinutes: number; // 10
   minWorkingHours: number;    // 8
   maxWorkingHours: number;    // 12
+  breakDurationMinutes?: number; // 60
+  halfDayThresholdHours?: number; // 4
+  fullDayThresholdHours?: number; // 8
+  allowEarlyPunchIn?: boolean; // true
+  maxEarlyPunchInMinutes?: number; // 60
+  enableOvertime?: boolean; // true
+  workingDays?: string[]; // ['Monday', 'Tuesday', ...]
   description?: string;
 }
 
@@ -59,19 +73,35 @@ export interface Employee {
 
 export interface AttendanceRecord {
   id: string;
+  organizationId?: string;
   employeeId: string;
   employeeName: string;
   department: string;
   date: string; // YYYY-MM-DD
   shiftId: string;
   shiftName: string;
-  punchIn: string | null;  // "09:42 AM"
-  punchOut: string | null; // "06:48 PM"
+  punchIn: string | null;  // e.g. "09:12 AM"
+  punchOut: string | null; // e.g. "06:21 PM"
+  punchInAt?: string | null; // exact server ISO timestamp
+  punchOutAt?: string | null; // exact server ISO timestamp
+  punchInStatus?: ArrivalStatus;
+  punchOutStatus?: DepartureStatus;
+  earlyMinutes?: number;
+  lateMinutes?: number;
+  graceAdjustedLateMinutes?: number;
   status: AttendanceStatus;
+  attendanceValue?: number; // 0, 0.5, 1
   workMode: WorkMode;
   workingHoursMinutes: number;
-  lateDurationMinutes: number;
+  breakMinutes?: number;
+  lateDurationMinutes: number; // backwards compatibility
   overtimeMinutes: number;
+  shiftStartAt?: string;
+  shiftEndAt?: string;
+  halfDayThresholdMinutes?: number;
+  fullDayThresholdMinutes?: number;
+  calculationSource?: 'SYSTEM_AUTO' | 'SERVER_PUNCH' | 'ADMIN_MANUAL';
+  manualAdjustmentReason?: string | null;
   remarks: string;
   modifiedBy: string | null;
   modifiedAt: string | null;
@@ -107,16 +137,28 @@ export interface Holiday {
 export interface PunchSettings {
   enablePunchIn: boolean;
   enablePunchOut: boolean;
-  maxPunchInTime: string; // "10:30"
-  maxPunchOutTime: string; // "20:00"
+  maxPunchInTime: string; // "11:00"
+  maxPunchOutTime: string; // "21:00"
   minWorkingHours: number; // 8
   allowEarlyPunchIn: boolean;
+  maxEarlyPunchInMinutes: number; // 60
   allowLatePunchIn: boolean;
+  gracePeriodMinutes: number; // 10
+  allowEarlyPunchOut: boolean;
+  minHoursRequiredForHalfDay: number; // 4
+  minHoursRequiredForFullDay: number; // 8
+  halfDayAttendanceValue: number; // 0.5
+  fullDayAttendanceValue: number; // 1.0
+  autoPunchOutAtShiftEnd: boolean;
+  enableOvertime: boolean;
+  overtimeStartRule: 'AFTER_SHIFT_END' | 'AFTER_REQUIRED_HOURS';
+  countEarlyWorkAsOvertime: boolean;
+  countLateWorkTowardOvertime: boolean;
+  breakDurationMinutes: number; // 60
   markLateAutomatically: boolean;
   allowMultiplePunches: boolean;
   allowStaffManualAttendance: boolean;
   allowStaffChangeWorkMode: boolean;
-  gracePeriodMinutes: number;
 }
 
 export interface CompanySettings {

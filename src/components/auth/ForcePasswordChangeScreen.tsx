@@ -16,7 +16,7 @@ import { ProjectLogo } from '../common/ProjectLogo';
 import { validatePasswordStrength } from '../../utils/cryptoSecurity';
 
 export const ForcePasswordChangeScreen: React.FC = () => {
-  const { adminAccount, updateInitialAdminPassword, logout, branding } = useAttendance();
+  const { currentUser, changeInitialPassword, logout, branding } = useAttendance();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -65,7 +65,7 @@ export const ForcePasswordChangeScreen: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    const res = updateInitialAdminPassword(currentPassword, newPassword);
+    const res = changeInitialPassword(currentPassword, newPassword, confirmPassword);
     setIsSubmitting(false);
 
     if (res.success) {
@@ -100,7 +100,7 @@ export const ForcePasswordChangeScreen: React.FC = () => {
         <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between text-xs">
           <div>
             <span className="text-slate-400 block text-[11px]">Logged in as Administrator</span>
-            <span className="font-mono font-bold text-slate-900">{adminAccount?.id}</span>
+            <span className="font-mono font-bold text-slate-900">{currentUser?.id || 'ADM-7X4Q9M2K'}</span>
           </div>
           <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold text-[10px]">
             Password Reset Required

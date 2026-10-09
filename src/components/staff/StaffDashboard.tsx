@@ -83,18 +83,45 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   }, [currentEmp?.id, currentEmp?.defaultWorkMode, todayRecord?.workMode]);
 
-  // Live elapsed counter simulation for "WORKING" state
-  const [elapsedMinutes, setElapsedMinutes] = useState(todayRecord?.workingHoursMinutes || 0);
+  // Live elapsed counter calculated from exact server punchIn timestamp
+  const calculateCurrentElapsed = () => {
+    if (!todayRecord?.punchIn) return 0;
+    if (todayRecord.punchOut && todayRecord.workingHoursMinutes !== undefined) {
+      return todayRecord.workingHoursMinutes;
+    }
+    if (todayRecord.punchInAt) {
+      const startMs = new Date(todayRecord.punchInAt).getTime();
+      const nowMs = Date.now();
+      return Math.max(0, Math.floor((nowMs - startMs) / (1000 * 60)));
+    }
+    const parts = todayRecord.punchIn.split(' ');
+    const [h, m] = parts[0].split(':').map((n) => parseInt(n, 10));
+    let startMin = (h % 12) * 60 + m;
+    if (parts[1]?.toUpperCase() === 'PM') startMin += 720;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return Math.max(0, nowMin - startMin);
+  };
+
+  const [elapsedMinutes, setElapsedMinutes] = useState(calculateCurrentElapsed());
+  const [showPunchOutConfirm, setShowPunchOutConfirm] = useState(false);
 
   useEffect(() => {
+    setElapsedMinutes(calculateCurrentElapsed());
     let interval: any;
-    if (todayRecord?.status === 'WORKING') {
+    if (
+      todayRecord &&
+      !todayRecord.punchOut &&
+      (todayRecord.status === 'WORKING' ||
+        todayRecord.status === 'IN_PROGRESS' ||
+        todayRecord.status === 'LATE')
+    ) {
       interval = setInterval(() => {
-        setElapsedMinutes((prev) => prev + 1);
-      }, 60000); // 1 minute ticker
+        setElapsedMinutes(calculateCurrentElapsed());
+      }, 10000); // 10 second ticker
     }
     return () => clearInterval(interval);
-  }, [todayRecord?.status]);
+  }, [todayRecord?.punchIn, todayRecord?.punchInAt, todayRecord?.punchOut, todayRecord?.status]);
 
   const handlePunchInClick = () => {
     setPunchFeedback(null);
@@ -106,7 +133,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const handlePunchOutClick = () => {
+  const handleConfirmPunchOut = () => {
+    setShowPunchOutConfirm(false);
     setPunchFeedback(null);
     const res = punchOut(currentEmp.id);
     if (res.success) {
@@ -114,6 +142,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     } else {
       setPunchFeedback({ type: 'error', message: res.message });
     }
+  };
+
+  const getExpectedStatus = (mins: number) => {
+    const halfDay = (assignedShift.halfDayThresholdHours ?? punchSettings.minHoursRequiredForHalfDay ?? 4) * 60;
+    const fullDay = (assignedShift.fullDayThresholdHours ?? punchSettings.minHoursRequiredForFullDay ?? 8) * 60;
+    if (mins < halfDay) return { text: 'EARLY OUT / INSUFFICIENT HOURS (0 Day)', color: 'text-rose-700 bg-rose-50 border-rose-200' };
+    if (mins < fullDay) return { text: 'HALF DAY (0.5 Day)', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    return { text: 'PRESENT (1.0 Day)', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
   };
 
   const formatElapsedTime = (mins: number) => {
@@ -216,18 +252,39 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   Today's Attendance Status
                 </span>
                 <h2 className="text-lg font-bold text-slate-900 mt-0.5">
-                  Wednesday, 7 October 2026
+                  {formattedToday}
                 </h2>
               </div>
 
-              {/* Status Badge */}
-              <div>
+              {/* Status and Arrival Badges */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {todayRecord?.punchIn && (
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      todayRecord.punchInStatus === 'EARLY' || (todayRecord.earlyMinutes && todayRecord.earlyMinutes > 0)
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : todayRecord.punchInStatus === 'LATE' || (todayRecord.lateMinutes && todayRecord.lateMinutes > 0)
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {todayRecord.punchInStatus === 'EARLY' || (todayRecord.earlyMinutes && todayRecord.earlyMinutes > 0)
+                      ? `Early Arrival: ${todayRecord.earlyMinutes}m`
+                      : todayRecord.punchInStatus === 'LATE' || (todayRecord.lateMinutes && todayRecord.lateMinutes > 0)
+                      ? `Late Arrival: ${todayRecord.lateMinutes}m`
+                      : 'On-Time Arrival'}
+                  </span>
+                )}
                 <span
                   className={`px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${
                     todayRecord?.status === 'WORKING'
                       ? 'bg-emerald-100 text-[#087A4B] animate-pulse'
                       : todayRecord?.status === 'PRESENT'
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : todayRecord?.status === 'HALF DAY'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                      : todayRecord?.status === 'EARLY_OUT'
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
                       : todayRecord?.status === 'LATE'
                       ? 'bg-amber-50 text-amber-700 border border-amber-200'
                       : todayRecord?.status === 'ON LEAVE'
@@ -241,8 +298,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         ? 'bg-emerald-500'
                         : todayRecord?.status === 'PRESENT'
                         ? 'bg-emerald-500'
-                        : todayRecord?.status === 'LATE'
+                        : todayRecord?.status === 'HALF DAY' || todayRecord?.status === 'LATE'
                         ? 'bg-amber-500'
+                        : todayRecord?.status === 'EARLY_OUT'
+                        ? 'bg-rose-500'
                         : 'bg-slate-400'
                     }`}
                   />
@@ -398,8 +457,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 </div>
               )}
 
-              {/* State: Currently Working */}
-              {todayRecord?.status === 'WORKING' && (
+              {/* State: Currently Working / In Progress */}
+              {todayRecord?.punchIn && !todayRecord?.punchOut && (
                 <div>
                   {!punchSettings.enablePunchOut ? (
                     <div className="p-4 bg-amber-50 text-amber-900 rounded-xl text-xs border border-amber-200 text-center font-medium">
@@ -407,7 +466,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                     </div>
                   ) : (
                     <button
-                      onClick={handlePunchOutClick}
+                      onClick={() => setShowPunchOutConfirm(true)}
                       className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-sm sm:text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
@@ -417,23 +476,44 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 </div>
               )}
 
-              {/* State: Completed / Late / Other */}
-              {(todayRecord?.status === 'PRESENT' ||
-                todayRecord?.status === 'HALF DAY' ||
-                (todayRecord?.status === 'LATE' && todayRecord?.punchOut)) && (
-                <div className="p-4 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs text-emerald-900 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    <div>
-                      <span className="font-bold block">Attendance Successfully Concluded Today</span>
-                      <span className="text-[11px] text-emerald-700">
-                        Total logged duration: {formatElapsedTime(todayRecord.workingHoursMinutes)}
+              {/* State: Completed / Punched Out */}
+              {todayRecord?.punchOut && (
+                <div className="p-4 bg-emerald-50/90 rounded-2xl border border-emerald-200 text-xs text-emerald-950 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <div>
+                        <span className="font-bold block text-sm">Attendance Concluded</span>
+                        <span className="text-[11px] text-emerald-700">
+                          Final status: <strong>{todayRecord.status}</strong> ({todayRecord.attendanceValue ?? 1} Day)
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-mono font-bold text-xs bg-white px-2.5 py-1 rounded-lg border border-emerald-200 text-slate-800">
+                      {todayRecord.punchOutStatus || 'NORMAL_OUT'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-emerald-200/60 text-[11px]">
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-slate-400 block text-[10px]">Punch In</span>
+                      <span className="font-bold font-mono text-slate-900">{todayRecord.punchIn}</span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-slate-400 block text-[10px]">Punch Out</span>
+                      <span className="font-bold font-mono text-slate-900">{todayRecord.punchOut}</span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-slate-400 block text-[10px]">Worked Duration</span>
+                      <span className="font-bold font-mono text-emerald-800">{formatElapsedTime(todayRecord.workingHoursMinutes)}</span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-slate-400 block text-[10px]">Overtime</span>
+                      <span className="font-bold font-mono text-slate-900">
+                        {todayRecord.overtimeMinutes > 0 ? formatElapsedTime(todayRecord.overtimeMinutes) : '0 min'}
                       </span>
                     </div>
                   </div>
-                  <span className="font-mono font-bold text-xs bg-white px-2.5 py-1 rounded-lg border border-emerald-200">
-                    FINALIZED
-                  </span>
                 </div>
               )}
 
@@ -516,6 +596,52 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal before finalizing Punch Out (Requirement 12) */}
+      {showPunchOutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 space-y-4">
+            <h3 className="text-base font-bold text-slate-900">
+              Confirm Punch Out
+            </h3>
+            <p className="text-xs text-slate-500">
+              Are you sure you want to conclude your shift and punch out?
+            </p>
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Punch In Time:</span>
+                <span className="font-mono font-bold text-slate-900">{todayRecord?.punchIn || '--:--'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Current Working Time:</span>
+                <span className="font-mono font-bold text-[#087A4B]">{formatElapsedTime(elapsedMinutes)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span className="text-slate-500">Expected Status:</span>
+                <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${getExpectedStatus(elapsedMinutes).color}`}>
+                  {getExpectedStatus(elapsedMinutes).text}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowPunchOutConfirm(false)}
+                className="flex-1 py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPunchOut}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Confirm Punch Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

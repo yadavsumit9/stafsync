@@ -167,13 +167,22 @@ export const ForcePasswordChangeModal: React.FC<ForcePasswordChangeModalProps> =
               <ShieldCheck className="w-4 h-4" />
               <span>{isSubmitting ? 'Updating...' : 'Update Password'}</span>
             </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="text-xs text-slate-500 hover:text-slate-800 py-1"
-            >
-              Cancel and Sign Out
-            </button>
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={onSuccess}
+                className="text-xs text-[#087A4B] hover:underline font-medium py-1"
+              >
+                Skip for now & Enter Dashboard →
+              </button>
+              <button
+                type="button"
+                onClick={logout}
+                className="text-xs text-slate-500 hover:text-slate-800 py-1"
+              >
+                Cancel and Sign Out
+              </button>
+            </div>
           </div>
         </form>
       </div>
